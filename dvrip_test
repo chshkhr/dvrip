@@ -58,8 +58,10 @@ conn.connect((argv[1], DVRIP_PORT), argv[2], argv[3])
 # print(conn.storageinfo())
 # print(conn.time(conn.time() - timedelta(seconds=0)))
 # now = datetime.now()
-lst = list(conn.files(start=datetime(2022, 7, 23, 8, 45, 0),
-                      end=datetime(2022, 7, 23, 8, 55, 0),
+start = datetime.strptime(argv[4], '%d.%m.%y %H:%M')
+end = start + timedelta(minutes=5)
+lst = list(conn.files(start=start,  # datetime(2022, 7, 23, 8, 45, 0),
+                      end=end,  # datetime(2022, 7, 23, 8, 55, 0),
                       channel=0,
                       type=FileType.VIDEO))
 print(lst[0])
@@ -77,19 +79,21 @@ fl = lst[0]
 sock = Socket(AF_INET, SOCK_STREAM)
 sock.connect((argv[1], DVRIP_PORT))
 s = conn.download(sock, fl)
-l = fl.length
-printProgressBar(0, l, prefix='Progress:', suffix='Complete')
-with open('test.264', 'wb') as out:
-    for i in range(fl.length):
+ln = fl.length
+outfn = argv[1]+start.strftime('-%Y-%m-%d-%H-%M.264')
+suffix = f'Complete of {ln}kb'
+printProgressBar(0, ln, prefix=outfn, suffix=suffix)
+with open(outfn, 'wb') as out:
+    for i in range(ln):
         chunk = s.read(1024)
         if not chunk:
             break
         out.write(chunk)
         out.flush()
-        #conn.keepalive()
+        # conn.keepalive()
         if i % 500 == 0:
             time.sleep(0.1)
-            printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete')
+            printProgressBar(i + 1, ln, prefix=outfn, suffix=suffix)
             conn.keepalive()
     out.close()
 s.close()

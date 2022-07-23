@@ -263,11 +263,11 @@ class DVRIPClient(DVRIPConnection):
 		                        params=PTZParams(channel=channel)))
 		self.request(request)
 
-	def download(self, socket, name):
+	def download(self, socket, fl):
 		pb = Playback(action=PlaybackAction.DOWNLOADSTART,
-		              start=datetime(2022, 7, 23, 11, 50, 0),
-		              end=datetime(2022, 7, 23, 11, 55, 0),  # FIXME now()?
-		              params=PlaybackParams(name=name))
+		              start=fl.start,
+		              end=fl.end,
+		              params=PlaybackParams(name=fl.name))
 		claim = PlaybackClaim(session=self.session, playback=pb)
 		request = DoPlayback(session=self.session, playback=pb)
 		return self.reader(socket, claim, request)

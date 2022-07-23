@@ -265,8 +265,8 @@ class DVRIPClient(DVRIPConnection):
 
 	def download(self, socket, name):
 		pb = Playback(action=PlaybackAction.DOWNLOADSTART,
-		              start=EPOCH,
-		              end=datetime(9999, 12, 31, 23, 59, 59),  # FIXME now()?
+		              start=datetime(2022, 7, 23, 11, 50, 0),
+		              end=datetime(2022, 7, 23, 11, 55, 0),  # FIXME now()?
 		              params=PlaybackParams(name=name))
 		claim = PlaybackClaim(session=self.session, playback=pb)
 		request = DoPlayback(session=self.session, playback=pb)

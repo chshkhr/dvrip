@@ -53,6 +53,7 @@ class SystemInfo(Object):
 
 	chassis:     absentmember[str] = absentmember()  # from _logininfo
 
+	model:       optionalmember[str] = optionalmember('DeviceModel')
 
 class PartitionInfo(Object):
 	# pylint: disable=line-too-long

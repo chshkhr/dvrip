@@ -27,44 +27,54 @@ def _write(file, data, _write=dvrip.packet._write):  # pylint: disable=protected
 dvrip.packet._write = _write  # pylint: disable=protected-access
 
 
-print(list(DVRIPClient.discover('', 1.0)))
+#print(list(DVRIPClient.discover('', 1.0)))
 
 conn = DVRIPClient(Socket(AF_INET, SOCK_STREAM))
 conn.connect((argv[1], DVRIP_PORT), argv[2], argv[3])
 print(conn.systeminfo())
-print(conn.storageinfo())
-print(conn.time(conn.time() - timedelta(seconds=0)))
-now = datetime.now()
-print(list(conn.files(start=now - timedelta(hours=5),
-                      end=now,
-                      channel=0,
-                      type=FileType.VIDEO)))
-entries = list(conn.log(start=now - timedelta(days=30), end=now))
-for e in entries:
-	print(e)
-	print(e.data)
-for p in set((e.type, e.data) for e in entries if isinstance(e.data, str)):
-	print(p)
-conn.button(0, PTZButton.MENU)
+#print(conn.storageinfo())
+# print(conn.time(conn.time() - timedelta(seconds=0)))
+# now = datetime.now()
+# print(list(conn.files(start=now - timedelta(minutes=15),
+#                       end=now,
+#                       channel=0,
+#                       type=FileType.VIDEO)))
+# entries = list(conn.log(start=now - timedelta(days=30), end=now))
+# for e in entries:
+# 	print(e)
+# 	print(e.data)
+# for p in set((e.type, e.data) for e in entries if isinstance(e.data, str)):
+# 	print(p)
+# conn.button(0, PTZButton.MENU)
 
-#name = '/idea0/2019-05-01/001/01.04.07-01.04.23[M][@15b7][0].h264'
-#sock = Socket(AF_INET, SOCK_STREAM)
-#sock.connect((argv[1], DVRIP_PORT))
+# name = '/idea0/2022-07-22/001/00.00.00-00.05.00[R][@caa7][0].h264'
+name = '/idea0/2022-07-23/001/16.35.00-16.40.00[R][@70f2][0].h264'
+sock = Socket(AF_INET, SOCK_STREAM)
+sock.connect((argv[1], DVRIP_PORT))
+s = conn.download(sock, name)
+with open('test.264', 'wb') as out:
+	for x in range(50000):
+		chunk = s.read(1024)
+		if not chunk:
+			break
+		out.write(chunk)
+		out.flush()
+s.close()
 
 
-#monitor = Monitor(action=MonitorAction.START,
+# monitor = Monitor(action=MonitorAction.START,
 #                  params=MonitorParams(channel=0,
 #                                       stream=Stream.HD))
-#claim = MonitorClaim(session=conn.session, monitor=monitor)
-#request = DoMonitor(session=conn.session, monitor=monitor)
-#in_ = conn.reader(sock, claim, request)
-
-#with open('test.264', 'wb') as out:
-#	while True:
-#		chunk = in_.read(16)
-#		if not chunk: break
-#		out.write(chunk)
-#		out.flush()
+# claim = MonitorClaim(session=conn.session, monitor=monitor)
+# request = DoMonitor(session=conn.session, monitor=monitor)
+# in_ = conn.reader(sock, claim, request)
+#
+# with open('test.264', 'wb') as out:
+# 	while True:
+# 		chunk = in_.read(16)
+# 		if not chunk: break
+# 		out.write(chunk)
+# 		out.flush()
 
 #conn.reboot()
 conn.logout()

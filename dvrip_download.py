@@ -10,6 +10,7 @@ from dvrip.files import FileType
 import time
 from os.path import exists
 from pathlib import Path
+import os
 
 
 # Print iterations progress
@@ -35,12 +36,12 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def download_file(conn, ip_address, dvrip_file, progress=print_progress_bar):
+def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
     sock = Socket(AF_INET, SOCK_STREAM)
     sock.connect((ip_address, DVRIP_PORT))
     s = conn.download(sock, dvrip_file)
     ln = dvrip_file.length
-    out_fn = ip_address.split('.')[3] + dvrip_file.start.strftime('-%Y%m%d-%H%M.h264')
+    out_fn = os.path.join(work_dir, ip_address.split('.')[3] + dvrip_file.start.strftime('-%Y%m%d-%H%M.h264'))
     suffix = f'Complete of {ln}kb'
     i = 0
     if exists(out_fn):
@@ -67,7 +68,7 @@ def download_file(conn, ip_address, dvrip_file, progress=print_progress_bar):
         s.close()
 
 
-def download_files(ip_address, user, password, start, end, progress=None):
+def download_files(ip_address, user, password, start, end, progress=None, work_dir=''):
     conn = DVRIPClient(Socket(AF_INET, SOCK_STREAM))
     conn.connect((ip_address, DVRIP_PORT), user, password)
     lst = list(conn.files(start=start,
@@ -75,7 +76,7 @@ def download_files(ip_address, user, password, start, end, progress=None):
                           channel=0,
                           type=FileType.VIDEO))
     for fl in lst:
-        download_file(conn, ip_address, fl, progress)
+        download_file(conn, ip_address, fl, progress=progress, work_dir=work_dir)
     conn.logout()
 
 

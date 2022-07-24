@@ -11,6 +11,7 @@ import time
 from os.path import exists
 from pathlib import Path
 
+
 # Print iterations progress
 def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=60, fill='█', printEnd="\r"):
     """
@@ -34,7 +35,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def download_file(conn, ip_address, dvrip_file):
+def download_file(conn, ip_address, dvrip_file, progress=print_progress_bar):
     sock = Socket(AF_INET, SOCK_STREAM)
     sock.connect((ip_address, DVRIP_PORT))
     s = conn.download(sock, dvrip_file)
@@ -44,7 +45,8 @@ def download_file(conn, ip_address, dvrip_file):
     i = 0
     if exists(out_fn):
         i = Path(out_fn).stat().st_size // 1024
-    print_progress_bar(i, ln, prefix=out_fn, suffix=suffix)
+    if progress is not None:
+        progress(i, ln, prefix=out_fn, suffix=suffix)
     if i < ln:
         with open(out_fn, 'wb') as out:
             for i in range(ln):
@@ -55,15 +57,17 @@ def download_file(conn, ip_address, dvrip_file):
                 out.flush()
                 # conn.keepalive()
                 if i % 500 == 0:
-                    print_progress_bar(i, ln, prefix=out_fn, suffix=suffix)
+                    if progress is not None:
+                        progress(i, ln, prefix=out_fn, suffix=suffix)
                     conn.keepalive()
                     time.sleep(0.01)
-            print_progress_bar(i, i, prefix=out_fn, suffix=suffix)
+            if progress is not None:
+                progress(i, i, prefix=out_fn, suffix=suffix)
             out.close()
         s.close()
 
 
-def download_files(ip_address, user, password, start, end):
+def download_files(ip_address, user, password, start, end, progress=None):
     conn = DVRIPClient(Socket(AF_INET, SOCK_STREAM))
     conn.connect((ip_address, DVRIP_PORT), user, password)
     lst = list(conn.files(start=start,
@@ -71,7 +75,7 @@ def download_files(ip_address, user, password, start, end):
                           channel=0,
                           type=FileType.VIDEO))
     for fl in lst:
-        download_file(conn, ip_address, fl)
+        download_file(conn, ip_address, fl, progress)
     conn.logout()
 
 
@@ -88,7 +92,7 @@ def main():
     start = start - timedelta(minutes=1)
     print(f'Camera: {ip_address}\nStart: {start}\n')
 
-    download_files(ip_address, argv[2], argv[3], start, end)
+    download_files(ip_address, argv[2], argv[3], start, end, progress=print_progress_bar)
 
 
 if __name__ == "__main__":

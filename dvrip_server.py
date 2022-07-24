@@ -1,72 +1,74 @@
-from http.server import BaseHTTPRequestHandler
-from http.server import HTTPServer
-
-from datetime import datetime, timedelta
-from socket import AF_INET, SOCK_STREAM, socket as Socket
-from sys import argv, stderr
-from dvrip import DVRIP_PORT
-from dvrip.io import DVRIPClient
-from dvrip.files import FileType
 import time
-from os.path import exists
-from pathlib import Path
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import logging
+from dvrip_download import download_file, download_files
+from urllib.parse import urlparse, parse_qs
+from datetime import datetime, timedelta
+import threading
+
+download_files_queue = []
 
 
-def run(server_class=HTTPServer, handler_class=BaseHTTPRequestHandler):
-    server_address = ('', 8008)
+def process_download_files_queue():
+    global download_files_queue
+    while True:
+        if len(download_files_queue) > 0:
+            qs = download_files_queue[0]
+            ip_address = qs['camip'][0]
+            user = qs['user'][0]
+            password = qs['password'][0]
+            start = datetime.strptime(qs['start'][0], '%d.%m.%y-%H:%M')
+            end = start + timedelta(minutes=2)
+            start = start - timedelta(minutes=1)
+            logging.info("^ Started downloading of %s %s", qs['camip'][0], qs['start'][0])
+            download_files(ip_address, user, password, start, end)
+            logging.info("- Finished downloading of %s %s", qs['camip'][0], qs['start'][0])
+            download_files_queue = download_files_queue[1::]
+        else:
+            time.sleep(1)
+
+
+class S(BaseHTTPRequestHandler):
+    def _set_response(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+
+    def do_GET(self):
+        self._set_response()
+        qs = parse_qs(urlparse(self.path).query)
+        if qs not in download_files_queue:
+            download_files_queue.append(qs)
+            logging.info("+ Adding %s %s to download queue", qs['camip'][0], qs['start'][0])
+        else:
+            logging.info(" %s %s already is in list", qs['camip'][0], qs['start'][0])
+        self.wfile.write("GET request for {}".format(self.path).encode('utf-8'))
+
+
+def run(server_class=HTTPServer, handler_class=S, port=8080):
+    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                        level=logging.INFO,
+                        datefmt='%d-%m-%Y %H:%M:%S',
+                        filename='dvrip_server.log')
+    server_address = ('', port)
     httpd = server_class(server_address, handler_class)
+    logging.info('=== Starting httpd =====\n')
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        httpd.server_close()
+        pass
+    httpd.server_close()
+    logging.info('... Stopping httpd ...\n')
 
 
-class HttpGetHandler(BaseHTTPRequestHandler):
-    """Обработчик с реализованным методом do_GET."""
+if __name__ == '__main__':
+    from sys import argv
 
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write('<html><head><meta charset="utf-8">'.encode())
-        self.wfile.write('<title>Простой HTTP-сервер.</title></head>'.encode())
-        self.wfile.write('<body>Был получен GET-запрос.</body></html>'.encode())
+    x = threading.Thread(target=process_download_files_queue)
+    x.start()
 
+    if len(argv) == 2:
+        run(port=int(argv[1]))
+    else:
+        run()
 
-    def do_POST(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write('<html><head><meta charset="utf-8">'.encode())
-        self.wfile.write('<title>Простой HTTP-сервер.</title></head>'.encode())
-        self.wfile.write('<body>Был получен GET-запрос.</body></html>'.encode())
-
-
-def download(dvrip_file):
-    sock = Socket(AF_INET, SOCK_STREAM)
-    sock.connect((argv[1], DVRIP_PORT))
-    s = conn.download_file(sock, dvrip_file)
-    ln = dvrip_file.length
-    out_fn = ip_address.split('.')[3] + dvrip_file.start.strftime('-%Y%m%d-%H%M.h264')
-    suffix = f'Complete of {ln}kb'
-    i = 0
-    if exists(out_fn):
-        i = Path(out_fn).stat().st_size // 1024
-    if i < ln:
-        with open(out_fn, 'wb') as out:
-            for i in range(ln):
-                chunk = s.read(1024)
-                if not chunk:
-                    break
-                out.write(chunk)
-                out.flush()
-                # conn.keepalive()
-                if i % 500 == 0:
-                    print_progress_bar(i, ln, prefix=out_fn, suffix=suffix)
-                    conn.keepalive()
-                    time.sleep(0.01)
-            print_progress_bar(i, i, prefix=out_fn, suffix=suffix)
-            out.close()
-        s.close()
-
-run(handler_class=HttpGetHandler)

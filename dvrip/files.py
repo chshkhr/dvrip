@@ -27,6 +27,7 @@ class GetFilesReply(Object, Message):
 @unique
 class FileType(Choice):
     VIDEO = 'h264'
+    AUDIO = 'g711a'
     IMAGE = 'jpg'
 
 

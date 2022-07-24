@@ -34,12 +34,12 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
         print()
 
 
-def download(file):
+def download_file(conn, ip_address, dvrip_file):
     sock = Socket(AF_INET, SOCK_STREAM)
-    sock.connect((argv[1], DVRIP_PORT))
-    s = conn.download(sock, file)
-    ln = file.length
-    out_fn = ip_address.split('.')[3] + file.start.strftime('-%Y%m%d-%H%M.h264')
+    sock.connect((ip_address, DVRIP_PORT))
+    s = conn.download(sock, dvrip_file)
+    ln = dvrip_file.length
+    out_fn = ip_address.split('.')[3] + dvrip_file.start.strftime('-%Y%m%d-%H%M.h264')
     suffix = f'Complete of {ln}kb'
     i = 0
     if exists(out_fn):
@@ -63,27 +63,33 @@ def download(file):
         s.close()
 
 
-# Print wait
-wt = int(argv[5])
-for j in range(wt):
-    print_progress_bar(j, wt, prefix="Wait: ", suffix=f"of {wt}c")
-    time.sleep(1)
+def download_files(ip_address, user, password, start, end):
+    conn = DVRIPClient(Socket(AF_INET, SOCK_STREAM))
+    conn.connect((ip_address, DVRIP_PORT), user, password)
+    lst = list(conn.files(start=start,
+                          end=end,
+                          channel=0,
+                          type=FileType.VIDEO))
+    for fl in lst:
+        download_file(conn, ip_address, fl)
+    conn.logout()
 
-ip_address = argv[1]
-start = datetime.strptime(argv[4], '%d.%m.%y %H:%M')
-end = start + timedelta(minutes=2)
-start = start - timedelta(minutes=1)
-print(f'Camera: {ip_address}\nStart: {start}\n')
 
-conn = DVRIPClient(Socket(AF_INET, SOCK_STREAM))
-conn.connect((ip_address, DVRIP_PORT), argv[2], argv[3])
+def main():
+    # Print wait
+    wait_sec = int(argv[5])
+    for j in range(wait_sec):
+        print_progress_bar(j, wait_sec, prefix="Wait: ", suffix=f"of {wait_sec}c")
+        time.sleep(1)
 
-lst = list(conn.files(start=start,
-                      end=end,
-                      channel=0,
-                      type=FileType.VIDEO))
+    ip_address = argv[1]
+    start = datetime.strptime(argv[4], '%d.%m.%y %H:%M')
+    end = start + timedelta(minutes=2)
+    start = start - timedelta(minutes=1)
+    print(f'Camera: {ip_address}\nStart: {start}\n')
 
-for fl in lst:
-    download(fl)
+    download_files(ip_address, argv[2], argv[3], start, end)
 
-conn.logout()
+
+if __name__ == "__main__":
+    main()

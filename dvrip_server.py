@@ -23,12 +23,15 @@ def process_download_files_queue():
             start = datetime.strptime(qs['start'][0], '%d.%m.%y-%H:%M')
             end = start + timedelta(minutes=2)
             start = start - timedelta(minutes=1)
+            while datetime.now() - end < timedelta(seconds=30):
+                logging.info("* Need some sleep...")
+                time.sleep(30)
             logging.info("^ Started downloading of %s %s", qs['camip'][0], qs['start'][0])
             download_files(ip_address, user, password, start, end, work_dir=work_dir)
             logging.info("- Finished downloading of %s %s", qs['camip'][0], qs['start'][0])
             download_files_queue = download_files_queue[1::]
             if len(download_files_queue) == 0:
-                logging.info("  Download queue is empty...")
+                logging.info("  Download queue is empty :)")
         else:
             time.sleep(1)
 

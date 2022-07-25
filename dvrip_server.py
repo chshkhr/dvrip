@@ -44,8 +44,14 @@ def process_download_files_queue():
             else:
                 try:
                     logging.info("^ Started downloading of %s", msg)
-                    k = download_files(ip_address, user, password, start, end, work_dir=work_dir)
-                    logging.info("- Finished downloading %i files on %s", k, msg)
+                    for m in range(3):
+                        k = download_files(ip_address, user, password, start, end, work_dir=work_dir)
+                        logging.info("- Finished downloading %i files on %s", k, msg)
+                        if k >= 3:
+                            break
+                        else:
+                            logging.info("^ Restart N%i downloading of %s in 1 min", m+1, msg)
+                            time.sleep(60)
                     finished_files.append(qs)
                     download_files_queue = download_files_queue[1::]
                 except DVRIPDecodeError as e:

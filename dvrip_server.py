@@ -11,10 +11,12 @@ import os
 
 work_dir = os.getcwdb().decode("utf-8")
 download_files_queue = []
+finished_files = []
+skipped_files = []
 
 
 def process_download_files_queue():
-    global download_files_queue
+    global download_files_queue, skipped_files, finished_files
     global work_dir
     while True:
         if len(download_files_queue) > 0:
@@ -25,8 +27,11 @@ def process_download_files_queue():
                 password = qs['password'][0]
                 start = datetime.strptime(qs['start'][0], '%d.%m.%y-%H:%M')
                 msg = f"{ip_address} {start}"
+                logging.info("^ Processing %s", msg)
                 if start > datetime.now():
-                    raise Exception('Start time grater than now')
+                    if qs not in skipped_files:
+                        skipped_files.append(qs)
+                    raise Exception('Start time greater than now')
                 end = start + timedelta(minutes=2)
                 start = start - timedelta(minutes=1)
                 while datetime.now() - end < timedelta(seconds=30):
@@ -41,6 +46,7 @@ def process_download_files_queue():
                     logging.info("^ Started downloading of %s", msg)
                     k = download_files(ip_address, user, password, start, end, work_dir=work_dir)
                     logging.info("- Finished downloading %i files on %s", k, msg)
+                    finished_files.append(qs)
                     download_files_queue = download_files_queue[1::]
                 except DVRIPDecodeError as e:
                     logging.error(f'  Incorrect credentials? {e}')
@@ -58,7 +64,17 @@ def process_download_files_queue():
             if len(download_files_queue) == 0:
                 logging.info("  The download queue is empty :)")
         else:
-            time.sleep(1)
+            time.sleep(10)
+            for sf in skipped_files:
+                if sf not in download_files_queue:
+                    start = datetime.strptime(sf['start'][0], '%d.%m.%y-%H:%M')
+                    if start <= datetime.now():
+                        download_files_queue.append(sf)
+                        skipped_files = skipped_files[1::]
+                        break
+                else:
+                    skipped_files = skipped_files[1::]
+                    break
 
 
 class MyRequestHandler(BaseHTTPRequestHandler):
@@ -74,11 +90,14 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(s.encode('utf-8'))
         logging.info(s)
         try:
-            if qs not in download_files_queue:
-                logging.info("+ Adding %s %s to the queue", qs['camip'][0], qs['start'][0])
+            mes = f"{qs['camip'][0]} {qs['start'][0]}"
+            if qs not in download_files_queue and \
+                    qs not in finished_files and \
+                    qs not in skipped_files:
+                logging.info(f"+ Adding {mes} to the queue")
                 download_files_queue.append(qs)
             else:
-                logging.info("~ Query %s %s is already in list", qs['camip'][0], qs['start'][0])
+                logging.info(f"~ The query {mes} is already in some list")
         except Exception as e:
             logging.warning(f'  Ignore incorrect request: there is no {e}')
 

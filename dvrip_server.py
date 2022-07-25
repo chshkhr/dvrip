@@ -8,11 +8,13 @@ from urllib.parse import urlparse, parse_qs
 from datetime import datetime, timedelta
 import threading
 import os
+import json
 
 work_dir = os.getcwdb().decode("utf-8")
 download_files_queue = []
 finished_files = []
 skipped_files = []
+TIME_FMT = '%d.%m.%y-%H:%M'
 
 
 def process_download_files_queue():
@@ -25,7 +27,7 @@ def process_download_files_queue():
                 ip_address = qs['camip'][0]
                 user = qs['user'][0]
                 password = qs['password'][0]
-                start = datetime.strptime(qs['start'][0], '%d.%m.%y-%H:%M')
+                start = datetime.strptime(qs['start'][0], TIME_FMT)
                 msg = f"{ip_address} {start}"
                 logging.info("^ Processing %s", msg)
                 if start > datetime.now():
@@ -73,7 +75,7 @@ def process_download_files_queue():
             time.sleep(10)
             for sf in skipped_files:
                 if sf not in download_files_queue:
-                    start = datetime.strptime(sf['start'][0], '%d.%m.%y-%H:%M')
+                    start = datetime.strptime(sf['start'][0], TIME_FMT)
                     if start <= datetime.now():
                         download_files_queue.append(sf)
                         skipped_files = skipped_files[1::]
@@ -84,6 +86,8 @@ def process_download_files_queue():
 
 
 class MyRequestHandler(BaseHTTPRequestHandler):
+    query = None
+
     def _set_response(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
@@ -91,21 +95,47 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self._set_response()
-        qs = parse_qs(urlparse(self.path).query)
         s = "GET request from {} for {}".format(self.client_address, self.path)
         self.wfile.write(s.encode('utf-8'))
         logging.info(s)
+
+        self.query = parse_qs(urlparse(self.path).query)
+        self.download()
+
+    def download(self):
         try:
-            mes = f"{qs['camip'][0]} {qs['start'][0]}"
-            if qs not in download_files_queue and \
-                    qs not in finished_files and \
-                    qs not in skipped_files:
+            mes = f"{self.query['camip'][0]} {self.query['start'][0]}"
+            if self.query not in download_files_queue and \
+                    self.query not in finished_files and \
+                    self.query not in skipped_files:
                 logging.info(f"+ Adding {mes} to the queue")
-                download_files_queue.append(qs)
+                download_files_queue.append(self.query)
             else:
                 logging.info(f"~ The query {mes} is already in some list")
         except Exception as e:
             logging.warning(f'  Ignore incorrect request: there is no {e}')
+
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])  # <--- Gets the size of data
+        post_data = self.rfile.read(content_length)  # <--- Gets the data itself
+        s = "POST request from {} for {}".format(self.client_address, self.path)
+        self.wfile.write(s.encode('utf-8'))
+        logging.info(s)
+        self._set_response()
+        self.query = parse_qs(urlparse(self.path).query)
+
+        try:
+            js = json.loads(post_data.decode('utf-8'))
+            ip_address = self.query['camip'][0]
+            start = datetime.strptime(self.query['start'][0], TIME_FMT)
+            out_fn = os.path.join(work_dir, ip_address.split('.')[3] + start.strftime('-%Y%m%d-%H%M.json'))
+            js['sec'] = self.query['sec'][0]
+            with open(out_fn, 'w') as out:
+                out.write(json.dumps(js, indent=4, sort_keys=True))
+        except Exception as e:
+            logging.error(e)
+
+        self.download()
 
 
 def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):

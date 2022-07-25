@@ -24,13 +24,12 @@ def process_download_files_queue():
                 user = qs['user'][0]
                 password = qs['password'][0]
                 start = datetime.strptime(qs['start'][0], '%d.%m.%y-%H:%M')
-                now = datetime.now()
                 msg = f"{ip_address} {start}"
-                if start > now:
+                if start > datetime.now():
                     raise Exception('Start time grater than now')
                 end = start + timedelta(minutes=2)
                 start = start - timedelta(minutes=1)
-                while now - end < timedelta(seconds=30):
+                while datetime.now() - end < timedelta(seconds=30):
                     logging.info("# Need some sleep...")
                     time.sleep(30)
             except Exception as e:

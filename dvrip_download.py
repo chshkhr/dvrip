@@ -97,4 +97,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(argv) < 6:
+        print('\nUsage: dvrip_download.exe cam_ip user password "d.m.y h:m" wait_sec\n')
+    else:
+        main()

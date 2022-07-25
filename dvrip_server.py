@@ -41,7 +41,7 @@ def process_download_files_queue():
                     logging.info("- Finished downloading of %s", msg)
                     download_files_queue = download_files_queue[1::]
                 except DVRIPDecodeError as e:
-                    logging.error(e)
+                    logging.error(f'  Incorect credetenials? {e}')
                     download_files_queue = download_files_queue[1::]
                 except DVRIPRequestError as e:
                     logging.error(e)

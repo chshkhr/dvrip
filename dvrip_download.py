@@ -78,6 +78,7 @@ def download_files(ip_address, user, password, start, end, progress=None, work_d
     for fl in lst:
         download_file(conn, ip_address, fl, progress=progress, work_dir=work_dir)
     conn.logout()
+    return len(lst)
 
 
 def main():

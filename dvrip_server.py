@@ -24,24 +24,27 @@ def process_download_files_queue():
                 user = qs['user'][0]
                 password = qs['password'][0]
                 start = datetime.strptime(qs['start'][0], '%d.%m.%y-%H:%M')
+                now = datetime.now()
                 msg = f"{ip_address} {start}"
+                if start > now:
+                    raise Exception('Start time grater than now')
                 end = start + timedelta(minutes=2)
                 start = start - timedelta(minutes=1)
-                while datetime.now() - end < timedelta(seconds=30):
+                while now - end < timedelta(seconds=30):
                     logging.info("# Need some sleep...")
                     time.sleep(30)
             except Exception as e:
                 logging.error(e)
                 download_files_queue = download_files_queue[1::]
-                logging.info('  Removing {msg} from the queue')
+                logging.info(f'- Removing {msg} from the queue')
             else:
                 try:
                     logging.info("^ Started downloading of %s", msg)
-                    download_files(ip_address, user, password, start, end, work_dir=work_dir)
-                    logging.info("- Finished downloading of %s", msg)
+                    k = download_files(ip_address, user, password, start, end, work_dir=work_dir)
+                    logging.info("- Finished downloading %i files on %s", k, msg)
                     download_files_queue = download_files_queue[1::]
                 except DVRIPDecodeError as e:
-                    logging.error(f'  Incorect credetenials? {e}')
+                    logging.error(f'  Incorrect credentials? {e}')
                     download_files_queue = download_files_queue[1::]
                 except DVRIPRequestError as e:
                     logging.error(e)

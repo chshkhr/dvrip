@@ -15,12 +15,14 @@ download_files_queue = []
 finished_files = []
 skipped_files = []
 TIME_FMT = '%d.%m.%y-%H:%M'
+last_step = datetime.now()
 
 
 def process_download_files_queue():
     global download_files_queue, skipped_files, finished_files
-    global work_dir
+    global work_dir, last_step
     while True:
+        last_step = datetime.now()
         if len(download_files_queue) > 0:
             try:
                 qs = download_files_queue[0]
@@ -37,6 +39,7 @@ def process_download_files_queue():
                 end = start + timedelta(minutes=2)
                 start = start - timedelta(minutes=1)
                 while datetime.now() - end < timedelta(seconds=30):
+                    last_step = datetime.now()
                     logging.info("# Need some sleep...")
                     time.sleep(30)
             except Exception as e:
@@ -47,6 +50,7 @@ def process_download_files_queue():
                 try:
                     logging.info("^ Started downloading of %s", msg)
                     for m in range(3):
+                        last_step = datetime.now()
                         k = download_files(ip_address, user, password, start, end, work_dir=work_dir)
                         logging.info("- Finished downloading %i files on %s", k, msg)
                         if k >= 3:
@@ -67,8 +71,8 @@ def process_download_files_queue():
                     if len(download_files_queue) > 1:
                         logging.info('- Try another')
                         download_files_queue = download_files_queue[1::]+download_files_queue[0:1:]
-                    logging.info('# Retry in 10 sec')
-                    time.sleep(10)
+                    logging.info('# Retry in 30 sec')
+                    time.sleep(30)
             if len(download_files_queue) == 0:
                 logging.info("  The download queue is empty :)")
         else:
@@ -182,11 +186,25 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
     logging.info('... Stopping httpd ...\n')
 
 
+def daemon():
+    global last_step
+    dnl_thread = threading.Thread(target=process_download_files_queue)
+    dnl_thread.start()
+    time.sleep(1)
+    while True:
+        if datetime.now() - last_step > timedelta(minutes=30):
+            logging.warning('!!! Daemon needs to restart the download thread !!!\n')
+            dnl_thread = threading.Thread(target=process_download_files_queue)
+            dnl_thread.start()
+            last_step = datetime.now()
+        else:
+            time.sleep(60)
+
+
 if __name__ == '__main__':
     from sys import argv
 
-    x = threading.Thread(target=process_download_files_queue)
-    x.start()
+    threading.Thread(target=daemon).start()
 
     if len(argv) == 3:
         work_dir = argv[2]

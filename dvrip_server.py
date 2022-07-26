@@ -109,6 +109,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     def download(self):
         try:
             mes = f"{self.query['camip'][0]} {self.query['start'][0]}"
+            if self.query['start'][0].lower() == 'now':
+                self.query['start'][0] = datetime.now().replace(second=0).strftime(TIME_FMT)
             if self.query not in download_files_queue and \
                     self.query not in finished_files and \
                     self.query not in skipped_files:

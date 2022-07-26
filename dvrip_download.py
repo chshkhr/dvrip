@@ -53,7 +53,7 @@ def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
     if i < ln:
         with open(out_fn, 'wb') as out:
             for i in range(ln):
-                chunk = sock.recv(1024)
+                chunk = s.read(1024)
                 if not chunk:
                     break
                 else:

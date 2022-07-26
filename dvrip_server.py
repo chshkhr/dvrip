@@ -140,9 +140,12 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             with open(os.path.join(work_dir, out_fn[1]+'.json'), 'w') as out:
                 out.write(json.dumps(js, indent=4, sort_keys=True))
             with open(os.path.join(work_dir, out_fn[1]+'.bat'), 'w') as out:
-                out.write(f'(echo file {out_fn[0]}.h264 & echo file {out_fn[1]}.h264  & echo file {out_fn[2]}.h264)>list.txt\n')
-                out.write(f'ffmpeg.exe -f concat -safe 0 -i list.txt -codec copy {out_fn[1]}.mp4"\n')
-                out.write('del list.txt\n')
+                if 28 <= sec <= 32:
+                    out.write(f'ffmpeg.exe -i {out_fn[1]}.h264 -codec copy {out_fn[1]}.mp4"\n')
+                else:
+                    out.write(f'(echo file {out_fn[0]}.h264 & echo file {out_fn[1]}.h264  & echo file {out_fn[2]}.h264)>list.txt\n')
+                    out.write(f'ffmpeg.exe -f concat -safe 0 -i list.txt -codec copy {out_fn[1]}.mp4"\n')
+                    out.write('del list.txt\n')
                 if crop is not None:
                     flt = f'-filter:v "crop={crop}"'
                 else:

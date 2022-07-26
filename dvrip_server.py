@@ -147,7 +147,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 out.write(json.dumps(js, indent=4, sort_keys=True))
             with open(os.path.join(work_dir, out_fn[1]+'.bat'), 'w') as out:
                 if 28 <= sec <= 32:
-                    out.write(f'ffmpeg.exe -i {out_fn[1]}.h264 -codec copy {out_fn[1]}.mp4"\n')
+                    out.write(f'ffmpeg.exe -y -i {out_fn[1]}.h264 -codec copy {out_fn[1]}.mp4"\n')
                 else:
                     out.write(f'call dvrip_download.bat {out_fn[1]}\n')
                     out.write(f'(echo file {out_fn[0]}.h264 & echo file {out_fn[1]}.h264  & echo file {out_fn[2]}.h264)>list.txt\n')
@@ -161,7 +161,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     min_sec = f'1:{sec-30}'
                 else:
                     min_sec = f'0:{sec+30}'
-                out.write(f'ffmpeg.exe -i {out_fn[1]}.mp4 -ss 0:{min_sec} -t 0:1:0 {flt} {out_fn[1]}-top.mp4\n')
+                out.write(f'ffmpeg.exe -y -i {out_fn[1]}.mp4 -ss 0:{min_sec} -t 0:1:0 {flt} {out_fn[1]}-top.mp4\n')
                 out.write(f'IF x%1x==xdx del {out_fn[1]}.mp4\n')
                 for fn in out_fn:
                     out.write(f'IF x%1x==xdx del {fn}.h264\n')

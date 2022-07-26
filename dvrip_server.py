@@ -151,7 +151,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 else:
                     out.write(f'call dvrip_download.bat {out_fn[1]}\n')
                     out.write(f'(echo file {out_fn[0]}.h264 & echo file {out_fn[1]}.h264  & echo file {out_fn[2]}.h264)>list.txt\n')
-                    out.write(f'ffmpeg.exe -f concat -safe 0 -i list.txt -codec copy {out_fn[1]}.mp4"\n')
+                    out.write(f'ffmpeg.exe -f concat -safe 0 -y -i list.txt -codec copy {out_fn[1]}.mp4"\n')
                     out.write('del list.txt\n')
                 if crop is not None:
                     flt = f'-filter:v "crop={crop}"'

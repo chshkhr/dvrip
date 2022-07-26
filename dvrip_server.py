@@ -127,11 +127,34 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         try:
             js = json.loads(post_data.decode('utf-8'))
             ip_address = self.query['camip'][0]
-            start = datetime.strptime(self.query['start'][0], TIME_FMT)
-            out_fn = os.path.join(work_dir, ip_address.split('.')[3] + start.strftime('-%Y%m%d-%H%M.json'))
-            js['sec'] = self.query['sec'][0]
-            with open(out_fn, 'w') as out:
+            start = datetime.strptime(self.query['start'][0], TIME_FMT) - timedelta(minutes=1)
+            out_fn = []
+            for k in range(3):
+                out_fn.append(ip_address.split('.')[3] + start.strftime('-%Y%m%d-%H%M'))
+                start = start + timedelta(minutes=1)
+            sec = int(self.query[f'sec'][0])
+            crop = None
+            if 'crop' in self.query:
+                crop = self.query['crop'][0]
+            js['sec'] = sec
+            with open(os.path.join(work_dir, out_fn[1]+'.json'), 'w') as out:
                 out.write(json.dumps(js, indent=4, sort_keys=True))
+            with open(os.path.join(work_dir, out_fn[1]+'.bat'), 'w') as out:
+                out.write(f'(echo file {out_fn[0]}.h264 & echo file {out_fn[1]}.h264  & echo file {out_fn[2]}.h264)>list.txt\n')
+                out.write(f'ffmpeg.exe -f concat -safe 0 -i list.txt -codec copy {out_fn[1]}.mp4"\n')
+                out.write('del list.txt\n')
+                if crop is not None:
+                    flt = f'-filter:v "crop={crop}"'
+                else:
+                    flt = ''
+                if sec >= 30:
+                    min_sec = f'1:{sec-30}'
+                else:
+                    min_sec = f'0:{sec+30}'
+                out.write(f'ffmpeg.exe -i {out_fn[1]}.mp4 -ss 0:{min_sec} -t 0:1:0 {flt} {out_fn[1]}-top.mp4\n')
+                out.write(f'IF x%1x==xdx del {out_fn[1]}.mp4\n')
+                for fn in out_fn:
+                    out.write(f'IF x%1x==xdx del {fn}.h264\n')
         except Exception as e:
             logging.error(e)
 

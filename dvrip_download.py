@@ -11,7 +11,7 @@ import time
 from os.path import exists
 from pathlib import Path
 import os
-
+import errno
 
 # Print iterations progress
 def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=60, fill='█', printEnd="\r"):
@@ -39,6 +39,8 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
 def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
     sock = Socket(AF_INET, SOCK_STREAM)
     sock.connect((ip_address, DVRIP_PORT))
+    sock.settimeout(5)
+    sock.setblocking(False)
     s = conn.download(sock, dvrip_file)
     ln = dvrip_file.length
     out_fn = os.path.join(work_dir, ip_address.split('.')[3] + dvrip_file.start.strftime('-%Y%m%d-%H%M.h264'))
@@ -51,17 +53,27 @@ def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
     if i < ln:
         with open(out_fn, 'wb') as out:
             for i in range(ln):
-                chunk = s.read(1024)
-                if not chunk:
-                    break
-                out.write(chunk)
-                out.flush()
-                # conn.keepalive()
-                if i % 500 == 0:
-                    if progress is not None:
-                        progress(i, ln, prefix=out_fn, suffix=suffix)
-                    conn.keepalive()
-                    time.sleep(0.01)
+                try:
+                    chunk = s.read(1024)
+                    if not chunk:
+                        break
+                except Exception as e:
+                    err = e.args[0]
+                    if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                        time.sleep(1)
+                        continue
+                    else:
+                        # a "real" error occurred
+                        break
+                else:
+                    out.write(chunk)
+                    out.flush()
+                    # conn.keepalive()
+                    if i % 500 == 0:
+                        if progress is not None:
+                            progress(i, ln, prefix=out_fn, suffix=suffix)
+                        conn.keepalive()
+                        time.sleep(0.01)
             if progress is not None:
                 progress(i, i, prefix=out_fn, suffix=suffix)
             out.close()

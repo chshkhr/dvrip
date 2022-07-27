@@ -141,16 +141,19 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     def download(self):
         try:
-            mes = f"{self.query['camip'][0]} {self.query['start'][0]}"
-            if self.query['start'][0].lower() == 'now':
-                self.query['start'][0] = datetime.now().replace(second=0).strftime(TIME_FMT)
-            if self.query not in download_files_queue and \
-                    self.query not in finished_files and \
-                    self.query not in skipped_files:
-                logging.info(f"+ Adding {mes} to the queue")
-                download_files_queue.append(self.query)
+            if 'dont_load' in self.query and self.query['dont_load'][0] == '1':
+                logging.info("- Download is not needed")
             else:
-                logging.info(f"~ The query {mes} is already in some list")
+                mes = f"{self.query['camip'][0]} {self.query['start'][0]}"
+                if self.query['start'][0].lower() == 'now':
+                    self.query['start'][0] = datetime.now().replace(second=0).strftime(TIME_FMT)
+                if self.query not in download_files_queue and \
+                        self.query not in finished_files and \
+                        self.query not in skipped_files:
+                    logging.info(f"+ Adding {mes} to the queue")
+                    download_files_queue.append(self.query)
+                else:
+                    logging.info(f"~ The query {mes} is already in some list")
         except Exception as e:
             logging.warning(f'  Ignore incorrect request: there is no {e}')
 

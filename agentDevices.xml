@@ -728,7 +728,7 @@
         <suppressnoise>true</suppressnoise>
         <audiomodel>None</audiomodel>
         <usehttp10>false</usehttp10>
-        <active>true</active>
+        <active>false</active>
         <notifyondisconnect>false</notifyondisconnect>
         <framerate>10</framerate>
         <micpair>-1</micpair>
@@ -1212,8 +1212,9 @@
       <entry type="TA" objecttypeid="2" objectid="1" mode="alert" param1="2,3" param2="192.168.108.226 vlad vlad37650 &quot;{0:d.M.y H:m}&quot; 121" param3="True" ident="9866481a-2349-4ebd-938d-489567842acf" active="false" />
       <entry type="TA" objecttypeid="2" objectid="1" mode="alert" param1="2,2" ident="be9c08ec-6823-4336-a5d2-8e4cf1226b4a" active="false" />
       <entry type="URL" objecttypeid="2" objectid="1" mode="alert" param1="http://localhost:8080/?camip=192.168.108.226&amp;user=vlad&amp;password=vlad37650&amp;start={0:d.M.y-H:m}&amp;sec={0:ss}&amp;crop=2292:800:300:0" param2="0" param4="POST" param5="{AIJSON}" ident="42f946ea-913b-48cf-86cf-b5fd3ab1c882" />
-      <entry type="URL" objecttypeid="2" objectid="3" mode="alert" param1="http://localhost:8080/?camip=192.168.108.226&amp;user=vlad&amp;password=vlad37650&amp;start={0:d.M.y-H:m}&amp;sec={0:ss}&amp;crop=2292:800:300:0" param2="0" param4="POST" param5="{AIJSON}" ident="e199dc88-2c41-4bdd-b37e-9238155906cf" />
-      <entry type="URL" objecttypeid="2" objectid="2" mode="alert" param1="http://localhost:8080/?camip=192.168.108.200&amp;user=vlad&amp;password=vlad37650&amp;start={0:d.M.y-H:m}&amp;sec={0:ss}&amp;crop=1600:800:600:0" param2="0" param4="POST" param5="{AIJSON}" ident="79ec4980-836a-475d-8fa9-3df475ca5d41" />
+      <entry type="URL" objecttypeid="2" objectid="3" mode="alert" param1="http://localhost:8080/?camip=192.168.108.226&amp;user=vlad&amp;password=vlad37650&amp;event_time={0:d.M.y-H:m:s}&amp;crop=2292:800:300:0" param2="0" param4="POST" param5="{AIJSON}" ident="e199dc88-2c41-4bdd-b37e-9238155906cf" />
+      <entry type="URL" objecttypeid="2" objectid="2" mode="alert" param1="http://localhost:8080/?camip=192.168.108.200&amp;user=vlad&amp;password=vlad37650&amp;event_time={0:d.M.y-H:m:s}&amp;crop=1600:800:600:0" param2="0" param4="POST" param5="{AIJSON}" ident="79ec4980-836a-475d-8fa9-3df475ca5d41" />
+      <entry type="URL" objecttypeid="1" objectid="4" mode="alert" param1="http://localhost:8080/?camip=192.168.108.226&amp;user=vlad&amp;password=vlad37650&amp;event_time={0:d.M.y-H:m:s}&amp;dont_load=1" param2="0" param4="POST" ident="c79d5aed-b10a-42cb-b3f5-47a4beaba1b7" />
     </entries>
   </actions>
   <locations>
@@ -1223,7 +1224,7 @@
   </locations>
   <alertGroups>
     <entries>
-      <entry name="IP Cams" minimumInterval="30" lastAlert="2022-07-27T09:01:32.7462418Z" />
+      <entry name="IP Cams" minimumInterval="30" lastAlert="2022-07-27T18:57:58.078133Z" />
     </entries>
   </alertGroups>
   <profiles>

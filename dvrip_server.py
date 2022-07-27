@@ -3,7 +3,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 
 from dvrip.errors import DVRIPDecodeError, DVRIPRequestError
-from dvrip_download import download_file, download_files, TIME_FMT
+from dvrip_download import get_start_end, download_files, TIME_FMT, ONE_FILE_DELTA
 from urllib.parse import urlparse, parse_qs
 from datetime import datetime, timedelta
 import threading
@@ -16,8 +16,8 @@ download_files_queue = []
 finished_files = []
 skipped_files = []
 FILE_TIME_FMT = '-%Y%m%d-%H%M'
+BAT_FILE_TIME_FMT = FILE_TIME_FMT + '-%S'
 last_step = datetime.now()
-ONE_FILE_DELTA = 10
 
 
 def process_download_files_queue():
@@ -31,25 +31,14 @@ def process_download_files_queue():
                 ip_address = qs['camip'][0]
                 user = qs['user'][0]
                 password = qs['password'][0]
-                start = datetime.strptime(qs['start'][0], TIME_FMT)
-                msg = f"{ip_address} {start}"
+                event_time = datetime.strptime(qs['event_time'][0], TIME_FMT)
+                msg = f"{ip_address} {event_time}"
                 logging.info("^ Processing %s", msg)
-                if start > datetime.now():
+                if event_time > datetime.now():
                     if qs not in skipped_files:
                         skipped_files.append(qs)
                     raise Exception('Start time greater than now')
-                if 'sec' in qs:
-                    sec = int(qs[f'sec'][0])
-                else:
-                    sec = 0
-                need1 = 30 - ONE_FILE_DELTA <= sec <= 30 + ONE_FILE_DELTA
-                if need1:
-                    end = start + timedelta(minutes=1)
-                else:
-                    end = start + timedelta(minutes=2)
-                    start = start - timedelta(minutes=1)
-
-                while datetime.now() - end < timedelta(seconds=30):
+                while datetime.now() - event_time < timedelta(seconds=120):
                     last_step = datetime.now()
                     logging.info("# Need some sleep...")
                     time.sleep(30)
@@ -60,15 +49,9 @@ def process_download_files_queue():
             else:
                 try:
                     logging.info("^ Started downloading of %s", msg)
-                    for m in range(3):
-                        last_step = datetime.now()
-                        k = download_files(ip_address, user, password, start, end, work_dir=work_dir)
-                        logging.info("- Finished downloading %i files on %s", k, msg)
-                        if (need1 and k == 1) or (k >= 3):
-                            break
-                        else:
-                            logging.info("^ Restart N%i downloading of %s in 1 min", m+1, msg)
-                            time.sleep(60)
+                    last_step = datetime.now()
+                    k = download_files(ip_address, user, password, event_time, work_dir=work_dir)
+                    logging.info("- Finished downloading %i files on %s", k, msg)
                     finished_files.append(qs)
                     download_files_queue = download_files_queue[1::]
                 except DVRIPDecodeError as e:
@@ -90,7 +73,7 @@ def process_download_files_queue():
             time.sleep(10)
             for sf in skipped_files:
                 if sf not in download_files_queue:
-                    start = datetime.strptime(sf['start'][0], TIME_FMT)
+                    start = datetime.strptime(sf['event_time'][0], TIME_FMT)
                     if start <= datetime.now():
                         download_files_queue.append(sf)
                         skipped_files = skipped_files[1::]
@@ -144,9 +127,9 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             if 'dont_load' in self.query and self.query['dont_load'][0] == '1':
                 logging.info("- Download is not needed")
             else:
-                mes = f"{self.query['camip'][0]} {self.query['start'][0]}"
-                if self.query['start'][0].lower() == 'now':
-                    self.query['start'][0] = datetime.now().replace(second=0).strftime(TIME_FMT)
+                mes = f"{self.query['camip'][0]} {self.query['event_time'][0]}"
+                if self.query['event_time'][0].lower() == 'now':
+                    self.query['event_time'][0] = datetime.now().strftime(TIME_FMT)
                 if self.query not in download_files_queue and \
                         self.query not in finished_files and \
                         self.query not in skipped_files:
@@ -159,28 +142,27 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     def create_bat_and_json(self, js=None):
         ip_address = self.query['camip'][0]
-        sec = int(self.query[f'sec'][0])
-        s = self.query['start'][0]
-        start = datetime.strptime(s, TIME_FMT)
         ip4 = ip_address.split('.')[3]
+        s = self.query['event_time'][0]
+        event_time = datetime.strptime(s, TIME_FMT)
+        [start, end] = get_start_end(event_time)
+        bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
         out_fn = ip4 + start.strftime(FILE_TIME_FMT)
-        out_fns = None
-        if not ((30 - ONE_FILE_DELTA) < sec < (30 + ONE_FILE_DELTA)):
-            out_fns = [ip4 + (start - timedelta(minutes=1)).strftime(FILE_TIME_FMT),
-                       ip4 + (start + timedelta(minutes=1)).strftime(FILE_TIME_FMT)]
+        out_fn2 = None
+        if end-start >= timedelta(seconds=119):
+            out_fn2 = ip4 + end.strftime(FILE_TIME_FMT)
         crop = None
         if 'crop' in self.query:
             crop = self.query['crop'][0]
         if js is not None:
-            js['sec'] = sec
-            with open(os.path.join(work_dir, out_fn + '.json'), 'w') as out:
+            with open(os.path.join(work_dir, bat_fn + '.json'), 'w') as out:
                 out.write(json.dumps(js, indent=4, sort_keys=True))
-        with open(os.path.join(work_dir, out_fn + '.bat'), 'w') as out:
+        with open(os.path.join(work_dir, bat_fn + '.bat'), 'w') as out:
             if crop is not None:
                 flt = f'-filter:v "crop={crop}"'
             else:
                 flt = ''
-            if out_fns is None:
+            if out_fn2 is None:
                 user = self.query['user'][0]
                 password = self.query['password'][0]
                 out.write(f'dvrip_download.exe {ip_address} {user} {password} {s} 0\n')
@@ -188,18 +170,18 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 if crop is not None:
                     out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} {out_fn}-top.mp4\n')
             else:
-                out.write(f'call dvrip_download.bat {out_fn}\n')
+                out.write(f'call dvrip_download.bat {bat_fn}\n')
                 out.write(
-                    f'(echo file {out_fns[0]}.h264 & echo file {out_fn}.h264  & echo file {out_fns[1]}.h264)>list.txt\n')
+                    f'(echo file {out_fn}.h264 & echo file {out_fn2}.h264)>list.txt\n')
                 out.write(f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -codec copy {out_fn}.mp4\n')
                 out.write('del list.txt\n')
+                sec = event_time.second
                 if sec >= 30:
                     min_sec = f'1:{sec - 30}'
                 else:
                     min_sec = f'0:{sec + 30}'
                 out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 -ss 0:{min_sec} -t 0:1:0 {flt} {out_fn}-top.mp4\n')
-                for fn in out_fns:
-                    out.write(f'IF x%1x==xdx del {fn}.h264\n')
+                out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
             out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
             out.write(f'IF x%1x==xdx del {out_fn}.mp4\n')
 

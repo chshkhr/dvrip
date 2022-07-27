@@ -13,7 +13,8 @@ from pathlib import Path
 import os
 
 
-TIME_FMT = '%d.%m.%y-%H:%M'
+TIME_FMT = '%d.%m.%y-%H:%M:%S'
+ONE_FILE_DELTA = 10
 
 
 # Print iterations progress
@@ -74,9 +75,24 @@ def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
         s.close()
 
 
-def download_files(ip_address, user, password, start, end, progress=None, work_dir=''):
+def get_start_end(event_time):
+    sec = event_time.second
+    start = event_time.replace(second=0)
+    end = start + timedelta(minutes=1)
+    if sec < 30 - ONE_FILE_DELTA:
+        start = start - timedelta(minutes=1)
+    elif 30 + ONE_FILE_DELTA < sec:
+        end = end + timedelta(minutes=1)
+    end = end - timedelta(seconds=1)
+    return [start, end]
+
+
+def download_files(ip_address, user, password, event_time, progress=None, work_dir=''):
     conn = DVRIPClient(Socket(AF_INET, SOCK_STREAM))
     conn.connect((ip_address, DVRIP_PORT), user, password)
+
+    [start, end] = get_start_end(event_time)
+
     lst = list(conn.files(start=start,
                           end=end,
                           channel=0,
@@ -95,16 +111,14 @@ def main():
         time.sleep(1)
 
     ip_address = argv[1]
-    start = datetime.strptime(argv[4], TIME_FMT)
-    end = start + timedelta(minutes=2)
-    start = start - timedelta(minutes=1)
-    print(f'Camera: {ip_address}\nStart: {start}\n')
+    event_time = datetime.strptime(argv[4], TIME_FMT)
+    print(f'Camera: {ip_address}\nEvent time: {event_time}\n')
 
-    download_files(ip_address, argv[2], argv[3], start, end, progress=print_progress_bar)
+    download_files(ip_address, argv[2], argv[3], event_time, progress=print_progress_bar)
 
 
 if __name__ == "__main__":
     if len(argv) < 6:
-        print('\nUsage: dvrip_download.exe cam_ip user password "d.m.y h:m" wait_sec\n')
+        print('\nUsage: dvrip_download.exe cam_ip user password d.m.y-h:m:s wait_sec\n')
     else:
         main()

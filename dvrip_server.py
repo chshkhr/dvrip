@@ -123,15 +123,17 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            content_length = int(self.headers['Content-Length'])  # <--- Gets the size of data
-            post_data = self.rfile.read(content_length)  # <--- Gets the data itself
             s = "POST request from {} for {}".format(self.client_address, self.path)
             self.wfile.write(s.encode('utf-8'))
             logging.info(s)
             self._set_response()
             self.query = parse_qs(urlparse(self.path).query)
-            js = json.loads(post_data.decode('utf-8'))
-            self.create_bat_and_json(js)
+            content_length = int(self.headers['Content-Length'])  # <--- Gets the size of data
+            if content_length == 0:
+                self.create_bat_and_json()
+            else:
+                post_data = self.rfile.read(content_length)  # <--- Gets the data itself
+                self.create_bat_and_json(json.loads(post_data.decode('utf-8')))
         except Exception as e:
             logging.error(e)
         else:

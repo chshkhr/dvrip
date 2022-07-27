@@ -13,6 +13,9 @@ from pathlib import Path
 import os
 
 
+TIME_FMT = '%d.%m.%y-%H:%M'
+
+
 # Print iterations progress
 def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=60, fill='█', printEnd="\r"):
     """
@@ -92,7 +95,7 @@ def main():
         time.sleep(1)
 
     ip_address = argv[1]
-    start = datetime.strptime(argv[4], '%d.%m.%y %H:%M')
+    start = datetime.strptime(argv[4], TIME_FMT)
     end = start + timedelta(minutes=2)
     start = start - timedelta(minutes=1)
     print(f'Camera: {ip_address}\nStart: {start}\n')

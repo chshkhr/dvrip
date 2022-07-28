@@ -31,6 +31,11 @@ def process_download_files_queue():
                 ip_address = qs['camip'][0]
                 user = qs['user'][0]
                 password = qs['password'][0]
+                if 'name' in qs:
+                    name = qs['name'][0]
+                    cur_dir = os.path.join(work_dir, name)
+                    if not os.path.exists(cur_dir):
+                        os.makedirs(cur_dir)
                 event_time = datetime.strptime(qs['event_time'][0], TIME_FMT)
                 msg = f"{ip_address} {event_time}"
                 logging.info("^ Processing %s", msg)
@@ -50,7 +55,7 @@ def process_download_files_queue():
                 try:
                     logging.info("^ Started downloading of %s", msg)
                     last_step = datetime.now()
-                    k = download_files(ip_address, user, password, event_time, work_dir=work_dir)
+                    k = download_files(ip_address, user, password, event_time, work_dir=cur_dir)
                     logging.info("- Finished downloading %i files on %s", k, msg)
                     finished_files.append(qs)
                     download_files_queue = download_files_queue[1::]
@@ -144,6 +149,10 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         ip_address = self.query['camip'][0]
         ip4 = ip_address.split('.')[3]
         s = self.query['event_time'][0]
+        name = self.query['name'][0]
+        wdir = os.path.join(work_dir, name)
+        if not os.path.exists(wdir):
+            os.makedirs(wdir)
         event_time = datetime.strptime(s, TIME_FMT)
         [start, end] = get_start_end(event_time)
         bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
@@ -155,9 +164,9 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         if 'crop' in self.query:
             crop = self.query['crop'][0]
         if js is not None:
-            with open(os.path.join(work_dir, bat_fn + '.json'), 'w') as out:
+            with open(os.path.join(wdir, bat_fn + '.json'), 'w') as out:
                 out.write(json.dumps(js, indent=4, sort_keys=True))
-        with open(os.path.join(work_dir, bat_fn + '.bat'), 'w') as out:
+        with open(os.path.join(wdir, bat_fn + '.bat'), 'w') as out:
             if crop is not None:
                 flt = f'-filter:v "crop={crop}"'
             else:

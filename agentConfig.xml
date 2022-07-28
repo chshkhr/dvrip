@@ -27,7 +27,7 @@
   <MachineName>Agent</MachineName>
   <CommsServer>https://agentrtc.azurewebsites.net</CommsServer>
   <MaxCPU>90</MaxCPU>
-  <UniqueID>65332092-9243-4961-b4d2-4fbbbc118500</UniqueID>
+  <UniqueID>861ce1a0-7777-4901-88c9-78a34ca259ae</UniqueID>
   <LocalUsername />
   <LocalPassword />
   <StreamFPS>15</StreamFPS>
@@ -64,7 +64,7 @@
   <StorageNotifyEmail />
   <StorageNotifyEmailLimit>75</StorageNotifyEmailLimit>
   <StorageNotifyEmailLastSent>2001-01-01T00:00:00</StorageNotifyEmailLastSent>
-  <ArchiveCheckTimeStamp>2022-07-24T00:30:26.3042243Z</ArchiveCheckTimeStamp>
+  <ArchiveCheckTimeStamp>2022-07-28T00:42:58.2965838Z</ArchiveCheckTimeStamp>
   <DriveFullEmailLastSent>2001-01-01T00:00:00</DriveFullEmailLastSent>
   <StorageNotifyEmailIntervalHours>12</StorageNotifyEmailIntervalHours>
   <DeepStackAIURL>http://localhost:5000</DeepStackAIURL>

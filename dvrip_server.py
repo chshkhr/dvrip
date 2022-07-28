@@ -177,7 +177,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 out.write(f'dvrip_download.exe {ip_address} {user} {password} {s} 0\n')
                 out.write(f'ffmpeg.exe -y -f h264 -i {out_fn}.h264 -codec copy {out_fn}.mp4"\n')
                 if crop is not None:
-                    out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} {out_fn}-top.mp4\n')
+                    out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} {out_fn}-{event_time.second}-top.mp4\n')
             else:
                 out.write(f'call dvrip_download.bat {bat_fn}\n')
                 out.write(
@@ -189,7 +189,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     min_sec = f'1:{sec - 30}'
                 else:
                     min_sec = f'0:{sec + 30}'
-                out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 -ss 0:{min_sec} -t 0:1:0 {flt} {out_fn}-top.mp4\n')
+                out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 -ss 0:{min_sec} -t 0:1:0 {flt} {out_fn}-{event_time.second}-top.mp4\n')
                 out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
             out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
             out.write(f'IF x%1x==xdx del {out_fn}.mp4\n')

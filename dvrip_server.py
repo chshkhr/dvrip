@@ -158,7 +158,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
         out_fn = ip4 + start.strftime(FILE_TIME_FMT)
         out_fn2 = None
-        if end-start >= timedelta(seconds=119):
+        if end-start > timedelta(minutes=1):
             out_fn2 = ip4 + end.strftime(FILE_TIME_FMT)
         crop = None
         if 'crop' in self.query:
@@ -186,10 +186,10 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 out.write('del list.txt\n')
                 sec = event_time.second
                 if sec >= 30:
-                    min_sec = f'1:{sec - 30}'
+                    sec = sec - 30
                 else:
-                    min_sec = f'0:{sec + 30}'
-                out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 -ss 0:{min_sec} -t 0:1:0 {flt} {out_fn}-{event_time.second}-top.mp4\n')
+                    sec = sec + 30
+                out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} {out_fn}-{event_time.second}-top.mp4\n')
                 out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
             out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
             out.write(f'IF x%1x==xdx del {out_fn}.mp4\n')

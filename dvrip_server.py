@@ -43,10 +43,10 @@ def process_download_files_queue():
                     if qs not in skipped_files:
                         skipped_files.append(qs)
                     raise Exception('Start time greater than now')
-                while datetime.now() - event_time < timedelta(seconds=120):
+                while datetime.now() - event_time < timedelta(minutes=3):
                     last_step = datetime.now()
                     logging.info("# Need some sleep...")
-                    time.sleep(30)
+                    time.sleep(60)
             except Exception as e:
                 logging.error(e)
                 download_files_queue = download_files_queue[1::]
@@ -171,13 +171,14 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 flt = f'-filter:v "crop={crop}"'
             else:
                 flt = ''
+            mp4_fn = f'{bat_fn}-{event_time.second}'
             if out_fn2 is None:
                 user = self.query['user'][0]
                 password = self.query['password'][0]
                 out.write(f'dvrip_download.exe {ip_address} {user} {password} {s} 0\n')
-                out.write(f'ffmpeg.exe -y -f h264 -i {out_fn}.h264 -codec copy {bat_fn}.mp4"\n')
+                out.write(f'ffmpeg.exe -y -f h264 -i {out_fn}.h264 -codec copy {mp4_fn}.mp4"\n')
                 if crop is not None:
-                    out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 {flt} {bat_fn}-{event_time.second}-top.mp4\n')
+                    out.write(f'ffmpeg.exe -y -i {mp4_fn}.mp4 {flt} {mp4_fn}-top.mp4\n')
             else:
                 out.write(f'call dvrip_download.bat {bat_fn}\n')
                 out.write(
@@ -189,11 +190,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     sec = sec - 30
                 else:
                     sec = sec + 30
-                out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} {bat_fn}-{event_time.second}-top.mp4\n')
+                out.write(f'ffmpeg.exe -y -i {mp4_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} {mp4_fn}-{event_time.second}-top.mp4\n')
                 out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
             out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
             if crop is not None:
-                out.write(f'del {bat_fn}.mp4\n')
+                out.write(f'del {mp4_fn}.mp4\n')
 
 
 def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):

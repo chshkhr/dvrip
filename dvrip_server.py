@@ -177,10 +177,10 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     password = self.query['password'][0]
                     out.write(f'dvrip_download.exe {ip_address} {user} {password} {s} 0\n')
                     out.write(f'call h264_audio.bat {out_fn}.h264 0\n')
-                    out.write(f'ren {out_fn}.mp4 {bat_fn}.mp4\n')
+                    #out.write(f'ren {out_fn}.mp4 {bat_fn}.mp4\n')
                     # out.write(f'ffmpeg.exe -y -f h264 -i {out_fn}.h264 -codec copy {bat_fn}.mp4"\n')
                     if crop is not None:
-                        out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 {flt} {bat_fn}-top.mp4\n')
+                        out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} {bat_fn}-top.mp4\n')
                 else:
                     out.write(f'call dvrip_download.bat {bat_fn}\n')
                     out.write(f'call h264_audio.bat {out_fn}.h264 0\n')
@@ -197,6 +197,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} {bat_fn}-top.mp4\n')
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
                 out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
+                out.write(f'del {out_fn}.mp4\n')
+                out.write(f'del {out_fn2}.mp4\n')
                 if crop is not None:
                     out.write(f'del {bat_fn}.mp4\n')
         except Exception as e:

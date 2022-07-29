@@ -3,7 +3,7 @@
 
 from datetime import datetime, timedelta
 from socket import AF_INET, SOCK_STREAM, socket as Socket
-from sys import argv, stderr
+from sys import argv
 from dvrip import DVRIP_PORT
 from dvrip.io import DVRIPClient
 from dvrip.files import FileType
@@ -39,6 +39,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
     if iteration == total:
         print()
 
+BLK = 1024
 
 def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
     sock = Socket(AF_INET, SOCK_STREAM)
@@ -47,31 +48,43 @@ def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
     # sock.setblocking(False)
     s = conn.download(sock, dvrip_file)
     ln = dvrip_file.length
-    out_fn = os.path.join(work_dir, ip_address.split('.')[3] + dvrip_file.start.strftime('-%Y%m%d-%H%M.h264'))
+    video_fn = os.path.join(work_dir, ip_address.split('.')[3] + dvrip_file.start.strftime('-%Y%m%d-%H%M.'))
+    audio_fn = video_fn + 'audio'
+    video_fn = video_fn + 'h264'
     suffix = f'Complete of {ln}kb'
     i = 0
-    if exists(out_fn):
-        i = Path(out_fn).stat().st_size // 1024
+    if exists(video_fn):
+        i = Path(video_fn).stat().st_size // 1024
     if progress is not None:
-        progress(i, ln, prefix=out_fn, suffix=suffix)
+        progress(i, ln, prefix=video_fn, suffix=suffix)
     if i < ln:
-        with open(out_fn, 'wb') as out:
+        with open(video_fn, 'wb') as video_out, open(audio_fn, 'wb') as audio_out:
             for i in range(ln):
-                chunk = s.read(1024)
+                chunk = s.read(BLK)
                 if not chunk:
                     break
                 else:
-                    out.write(chunk)
-                    out.flush()
-                    # conn.keepalive()
+                    end_audio = -1
+                    while True:
+                        start_audio = chunk.find(b'\x00\x01\xfa\x0e\x02\xa0\x00', end_audio+1)
+                        if start_audio >= 0:
+                            start_audio += 7
+                            end_audio = start_audio + 160
+                            audio_out.write(chunk[start_audio:end_audio])
+                        else:
+                            break
+                    audio_out.flush()
+                    video_out.write(chunk)
+                    video_out.flush()
                     if i % 500 == 0:
                         if progress is not None:
-                            progress(i, ln, prefix=out_fn, suffix=suffix)
+                            progress(i, ln, prefix=video_fn, suffix=suffix)
                         conn.keepalive()
                         time.sleep(0.01)
             if progress is not None:
-                progress(i, i, prefix=out_fn, suffix=suffix)
-            out.close()
+                progress(i, i, prefix=video_fn, suffix=suffix)
+            video_out.close()
+            audio_out.close()
         s.close()
 
 

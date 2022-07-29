@@ -176,14 +176,18 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     user = self.query['user'][0]
                     password = self.query['password'][0]
                     out.write(f'dvrip_download.exe {ip_address} {user} {password} {s} 0\n')
-                    out.write(f'ffmpeg.exe -y -f h264 -i {out_fn}.h264 -codec copy {bat_fn}.mp4"\n')
+                    out.write(f'call h264_audio.bat {out_fn}.h264 0\n')
+                    out.write(f'ren {out_fn}.mp4 {bat_fn}.mp4\n')
+                    # out.write(f'ffmpeg.exe -y -f h264 -i {out_fn}.h264 -codec copy {bat_fn}.mp4"\n')
                     if crop is not None:
                         out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 {flt} {bat_fn}-top.mp4\n')
                 else:
                     out.write(f'call dvrip_download.bat {bat_fn}\n')
+                    out.write(f'call h264_audio.bat {out_fn}.h264 0\n')
+                    out.write(f'call h264_audio.bat {out_fn2}.h264 0\n')
                     out.write(
-                        f'(echo file {out_fn}.h264 & echo file {out_fn2}.h264)>list.txt\n')
-                    out.write(f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -codec copy {bat_fn}.mp4\n')
+                        f'(echo file {out_fn}.mp4 & echo file {out_fn2}.mp4)>list.txt\n')
+                    out.write(f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -codec copy -c:a copy {bat_fn}.mp4\n')
                     out.write('del list.txt\n')
                     sec = event_time.second
                     if sec >= 30:

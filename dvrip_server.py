@@ -193,12 +193,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                         sec = sec + 30
                     out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} -c:a copy {bat_fn}-top.mp4\n')
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
+                    out.write(f'del {bat_fn}.mp4\n')
+                    out.write(f'del {out_fn}.mp4\n')
                 out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
-                out.write(f'del {out_fn}.mp4\n')
                 if out_fn2 is not None:
                     out.write(f'del {out_fn2}.mp4\n')
-                if crop is not None:
-                    out.write(f'del {bat_fn}.mp4\n')
         except Exception as e:
             logging.error(f'  Json/bat processing error: {e}')
 

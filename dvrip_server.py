@@ -43,7 +43,7 @@ def process_download_files_queue():
                     if qs not in skipped_files:
                         skipped_files.append(qs)
                     raise Exception('Start time greater than now')
-                while datetime.now() - event_time < timedelta(minutes=5):
+                while datetime.now() - event_time < timedelta(minutes=8):
                     last_step = datetime.now()
                     logging.info("# Need some sleep...")
                     time.sleep(60)
@@ -153,8 +153,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             device_work_dir = os.path.join(work_dir, name)
             if not os.path.exists(device_work_dir):
                 os.makedirs(device_work_dir)
-            event_time_str = self.query['event_time'][0], TIME_FMT
-            event_time = datetime.strptime(event_time_str)
+            event_time_str = self.query['event_time'][0]
+            event_time = datetime.strptime(event_time_str, TIME_FMT)
             [start, end] = get_start_end(event_time)
             bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
             out_fn = ip4 + start.strftime(FILE_TIME_FMT)

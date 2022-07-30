@@ -62,7 +62,7 @@ def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
                 if not chunk:
                     break
                 video_out.write(chunk)
-                if i % 500 == 0:
+                if i % 200 == 0:
                     video_out.flush()
                     if progress is not None:
                         progress(i, ln, prefix=video_fn, suffix=suffix)

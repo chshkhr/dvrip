@@ -133,8 +133,6 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 logging.info("- Download is not needed")
             else:
                 mes = f"{self.query['camip'][0]} {self.query['event_time'][0]}"
-                if self.query['event_time'][0].lower() == 'now':
-                    self.query['event_time'][0] = datetime.now().strftime(TIME_FMT)
                 if self.query not in download_files_queue and \
                         self.query not in finished_files and \
                         self.query not in skipped_files:
@@ -149,12 +147,13 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         try:
             ip_address = self.query['camip'][0]
             ip4 = ip_address.split('.')[3]
-            s = self.query['event_time'][0]
+            if self.query['event_time'][0].lower() == 'now':
+                self.query['event_time'][0] = datetime.now().strftime(TIME_FMT)
             name = self.query['name'][0]
-            wdir = os.path.join(work_dir, name)
-            if not os.path.exists(wdir):
-                os.makedirs(wdir)
-            event_time = datetime.strptime(s, TIME_FMT)
+            device_work_dir = os.path.join(work_dir, name)
+            if not os.path.exists(device_work_dir):
+                os.makedirs(device_work_dir)
+            event_time = datetime.strptime(self.query['event_time'][0], TIME_FMT)
             [start, end] = get_start_end(event_time)
             bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
             out_fn = ip4 + start.strftime(FILE_TIME_FMT)
@@ -165,9 +164,9 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             if 'crop' in self.query:
                 crop = self.query['crop'][0]
             if js is not None:
-                with open(os.path.join(wdir, bat_fn + '.json'), 'w') as out:
+                with open(os.path.join(device_work_dir, bat_fn + '.json'), 'w') as out:
                     out.write(json.dumps(js, indent=4, sort_keys=True))
-            with open(os.path.join(wdir, bat_fn + '.bat'), 'w') as out:
+            with open(os.path.join(device_work_dir, bat_fn + '.bat'), 'w') as out:
                 if crop is not None:
                     flt = f'-filter:v "crop={crop}"'
                 else:
@@ -175,7 +174,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 if out_fn2 is None:
                     user = self.query['user'][0]
                     password = self.query['password'][0]
-                    out.write(f'dvrip_download.exe {ip_address} {user} {password} {s} 0\n')
+                    out.write(f'dvrip_download.exe {ip_address} {user} {password} {event_time} 0\n')
                     out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
                     if crop is not None:
                         out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} {bat_fn}-top.mp4\n')
@@ -196,7 +195,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
                 out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
                 out.write(f'del {out_fn}.mp4\n')
-                out.write(f'del {out_fn2}.mp4\n')
+                if out_fn2 is not None:
+                    out.write(f'del {out_fn2}.mp4\n')
                 if crop is not None:
                     out.write(f'del {bat_fn}.mp4\n')
         except Exception as e:

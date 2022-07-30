@@ -12,9 +12,9 @@ def extract_audio(in_file):
     i = 0
     print_progress_bar(i, ln, prefix=in_file, suffix=suffix)
     if i < ln:
-        with open(in_file, 'rb') as s, open(audio_fn, 'wb') as audio_out:
+        with open(in_file, 'rb') as h264_in, open(audio_fn, 'wb') as audio_out:
             for i in range(ln):
-                chunk = s.read(BLK)
+                chunk = h264_in.read(BLK)
                 if not chunk:
                     break
                 else:
@@ -31,8 +31,6 @@ def extract_audio(in_file):
                     if i % 500 == 0:
                         print_progress_bar(i, ln, prefix=in_file, suffix=suffix)
             print_progress_bar(i, i, prefix=in_file, suffix=suffix)
-            audio_out.close()
-        s.close()
 
 
 def main():

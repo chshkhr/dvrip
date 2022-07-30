@@ -153,7 +153,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             device_work_dir = os.path.join(work_dir, name)
             if not os.path.exists(device_work_dir):
                 os.makedirs(device_work_dir)
-            event_time = datetime.strptime(self.query['event_time'][0], TIME_FMT)
+            event_time_str = self.query['event_time'][0], TIME_FMT
+            event_time = datetime.strptime(event_time_str)
             [start, end] = get_start_end(event_time)
             bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
             out_fn = ip4 + start.strftime(FILE_TIME_FMT)
@@ -174,7 +175,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 if out_fn2 is None:
                     user = self.query['user'][0]
                     password = self.query['password'][0]
-                    out.write(f'dvrip_download.exe {ip_address} {user} {password} {event_time} 0\n')
+                    out.write(f'dvrip_download.exe {ip_address} {user} {password} {event_time_str} 0\n')
                     out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
                     if crop is not None:
                         out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} {bat_fn}-top.mp4\n')

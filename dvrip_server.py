@@ -171,7 +171,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 if crop is not None:
                     flt = f'-filter:v "crop={crop}"'
                 else:
-                    flt = ''
+                    flt = '-c:v copy'
                 if out_fn2 is None:
                     user = self.query['user'][0]
                     password = self.query['password'][0]
@@ -192,7 +192,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                         sec = sec - 30
                     else:
                         sec = sec + 30
-                    out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} {bat_fn}-top.mp4\n')
+                    out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} -c:a copy {bat_fn}-top.mp4\n')
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
                 out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
                 out.write(f'del {out_fn}.mp4\n')

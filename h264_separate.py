@@ -27,7 +27,8 @@ def separate_video_and_audio(in_file):
                 start_audio = data.find(PATTERN, end_audio + 1)
                 if start_audio > 0:
                     video_out.write(data[end_audio+1:start_audio-1])
-            video_out.write(data[end_audio+1:])
+            if data[end_audio + 1:] == b'\x00':
+                video_out.write(data[end_audio+1:])
 
 
 def main():

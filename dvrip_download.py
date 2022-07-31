@@ -44,7 +44,7 @@ BLK = 1024
 def download_file(conn, ip_address, dvrip_file, progress=None, work_dir=''):
     sock = Socket(AF_INET, SOCK_STREAM)
     sock.connect((ip_address, DVRIP_PORT))
-    # sock.settimeout(5)
+    sock.settimeout(5)
     # sock.setblocking(False)
     s = conn.download(sock, dvrip_file)
     ln = dvrip_file.length

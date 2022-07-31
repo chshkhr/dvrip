@@ -2,7 +2,7 @@ net stop DvripServer
 nssm remove DvripServer confirm
 del grab\dvrip_Server.log
 
-del dvrip_Server.exe
+del dvrip_server.exe
 move D:\pythonmy\dvrip\output\dvrip_server.exe .
 
 nssm install DvripServer dvrip_server.exe

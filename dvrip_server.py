@@ -212,7 +212,6 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             logging.error(f'  Json/bat processing error: {e}')
 
 
-daemon_run_count = 0
 dvrip_load_on_run = 'dvrip_load_on_run.json'
 
 
@@ -267,27 +266,19 @@ def save_queue():
 
 
 def reinstall_service():
-    logging.warning(' !!! Service Reinstall !!!')
+    logging.warning('!!! Service ReInstallation !!!')
     save_queue()
     subprocess.Popen(os.path.join(work_dir, 'DvripService-reinstall-start.bat'), creationflags=subprocess.CREATE_NEW_CONSOLE)
 
 
 def daemon():
-    global last_step, daemon_run_count, download_files_queue
+    global last_step, download_files_queue
     dnl_thread = threading.Thread(target=process_download_files_queue)
     dnl_thread.start()
     time.sleep(1)
     while True:
         if datetime.now() - last_step > timedelta(minutes=30):
-            if daemon_run_count < 3:
-                daemon_run_count += 1
-                logging.warning(f'!!! ({daemon_run_count}) Daemon needs to restart the download thread !!!\n')
-                dnl_thread = threading.Thread(target=process_download_files_queue)
-                dnl_thread.start()
-                last_step = datetime.now()
-            else:
-                reinstall_service()
-
+            reinstall_service()
         else:
             time.sleep(60)
 

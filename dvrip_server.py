@@ -1,6 +1,7 @@
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
+from os.path import exists
 
 from dvrip.errors import DVRIPDecodeError, DVRIPRequestError
 from dvrip_download import get_start_end, download_files, TIME_FMT, ONE_FILE_DELTA
@@ -9,7 +10,10 @@ from datetime import datetime, timedelta
 import threading
 import os
 import json
+import subprocess
+from sys import argv
 
+from winreg import *
 
 work_dir = os.getcwdb().decode("utf-8")
 download_files_queue = []
@@ -69,7 +73,7 @@ def process_download_files_queue():
                     logging.error(e)
                     if len(download_files_queue) > 1:
                         logging.info('- Try another')
-                        download_files_queue = download_files_queue[1::]+download_files_queue[0:1:]
+                        download_files_queue = download_files_queue[1::] + download_files_queue[0:1:]
                     logging.info('# Retry in 30 sec')
                     time.sleep(30)
             if len(download_files_queue) == 0:
@@ -107,7 +111,10 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.error(e)
         else:
-            self.download()
+            if 'reinstall_service' in self.query and self.query['reinstall_service'][0] == '1':
+                reinstall_service()
+            else:
+                self.download()
 
     def do_POST(self):
         try:
@@ -159,7 +166,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
             out_fn = ip4 + start.strftime(FILE_TIME_FMT)
             out_fn2 = None
-            if end-start > timedelta(minutes=1):
+            if end - start > timedelta(minutes=1):
                 out_fn2 = ip4 + end.strftime(FILE_TIME_FMT)
             crop = None
             if 'crop' in self.query:
@@ -185,14 +192,16 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f'call h264_separate.bat {out_fn2}.h264 0\n')
                     out.write(
                         f'(echo file {out_fn}.mp4 & echo file {out_fn2}.mp4)>list.txt\n')
-                    out.write(f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -codec copy -c:a copy {bat_fn}.mp4\n')
+                    out.write(
+                        f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -codec copy -c:a copy {bat_fn}.mp4\n')
                     out.write('del list.txt\n')
                     sec = event_time.second
                     if sec >= 30:
                         sec = sec - 30
                     else:
                         sec = sec + 30
-                    out.write(f'ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} -c:a copy {bat_fn}-top.mp4\n')
+                    out.write(
+                        f'ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} -c:a copy {bat_fn}-top.mp4\n')
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
                     out.write(f'del {bat_fn}.mp4\n')
                     out.write(f'del {out_fn}.mp4\n')
@@ -203,13 +212,39 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             logging.error(f'  Json/bat processing error: {e}')
 
 
+daemon_run_count = 0
+dvrip_load_on_run = 'dvrip_load_on_run.json'
+
+
 def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
-    global work_dir
+    global work_dir, dvrip_load_on_run, download_files_queue
     logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
                         level=logging.INFO,
                         datefmt='%d-%m-%Y %H:%M:%S',
                         filename=os.path.join(work_dir, 'dvrip_server.log'),
                         )
+
+    if argv[0].find('dvrip_server.py') < 0:
+        try:
+            a_key = r"SYSTEM\CurrentControlSet\Services\DvripServer\Parameters"
+            a_reg = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
+            a_key = OpenKey(a_reg, a_key)
+            work_dir = QueryValueEx(a_key, "AppDirectory")[0]
+            # work_dir = os.path.abspath(os.path.join(work_dir, os.pardir))
+            CloseKey(a_key)
+        except Exception as e:
+            logging.error(e)
+
+    if exists(dvrip_load_on_run):
+        try:
+            with open(dvrip_load_on_run, 'rt') as f:
+                download_files_queue = json.loads(f.read())
+            logging.info(f'  On start loaded the queue with {len(download_files_queue)} tasks ')
+        except Exception as e:
+            logging.error(e)
+        finally:
+            os.remove(dvrip_load_on_run)
+
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
     logging.info(f'=== Starting httpd on port {port} =====\n')
@@ -219,30 +254,51 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
         pass
     httpd.server_close()
     logging.info('... Stopping httpd ...\n')
+    save_queue()
+
+
+def save_queue():
+    global work_dir, dvrip_load_on_run, download_files_queue
+    if len(download_files_queue) > 0:
+        s = os.path.join(work_dir, dvrip_load_on_run)
+        logging.info(f'  Saving the queue with {len(download_files_queue)} tasks to {s}\n')
+        with open(s, 'wt') as f:
+            f.write(json.dumps(download_files_queue))
+
+
+def reinstall_service():
+    logging.warning(' !!! Service Reinstall !!!')
+    save_queue()
+    subprocess.Popen(os.path.join(work_dir, 'DvripService-reinstall-start.bat'), creationflags=subprocess.CREATE_NEW_CONSOLE)
 
 
 def daemon():
-    global last_step
+    global last_step, daemon_run_count, download_files_queue
     dnl_thread = threading.Thread(target=process_download_files_queue)
     dnl_thread.start()
     time.sleep(1)
     while True:
         if datetime.now() - last_step > timedelta(minutes=30):
-            logging.warning('!!! Daemon needs to restart the download thread !!!\n')
-            dnl_thread = threading.Thread(target=process_download_files_queue)
-            dnl_thread.start()
-            last_step = datetime.now()
+            if daemon_run_count < 3:
+                daemon_run_count += 1
+                logging.warning(f'!!! ({daemon_run_count}) Daemon needs to restart the download thread !!!\n')
+                dnl_thread = threading.Thread(target=process_download_files_queue)
+                dnl_thread.start()
+                last_step = datetime.now()
+            else:
+                reinstall_service()
+
         else:
             time.sleep(60)
 
 
 if __name__ == '__main__':
-    from sys import argv
-
     threading.Thread(target=daemon).start()
 
     if len(argv) == 3:
         work_dir = argv[2]
+
+    dvrip_load_on_run = os.path.join(work_dir, dvrip_load_on_run)
 
     if len(argv) >= 2:
         run(port=int(argv[1]))

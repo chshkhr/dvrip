@@ -278,7 +278,7 @@ def daemon():
     dnl_thread.start()
     time.sleep(1)
     while True:
-        if datetime.now() - last_step > timedelta(minutes=30):
+        if datetime.now() - last_step > timedelta(minutes=15):
             reinstall_service()
         else:
             time.sleep(60)

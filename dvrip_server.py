@@ -280,8 +280,8 @@ def daemon():
     while True:
         if datetime.now() - last_step > timedelta(minutes=15):
             reinstall_service()
-        else:
-            time.sleep(60)
+            break
+        time.sleep(60)
 
 
 if __name__ == '__main__':

@@ -239,7 +239,7 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
         try:
             with open(dvrip_load_on_run, 'rt') as f:
                 download_files_queue = json.loads(f.read())
-            logging.info(f'  On start loaded the queue with {len(download_files_queue)} tasks ')
+            logging.info(f'~~On start loaded the queue with {len(download_files_queue)} tasks ')
         except Exception as e:
             logging.error(e)
         finally:
@@ -247,27 +247,29 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
 
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
-    logging.info(f'=== Starting httpd on port {port} =====\n')
+    logging.info(f'<= Starting httpd on port {port} =>')
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
-    httpd.server_close()
-    logging.info('... Stopping httpd ...\n')
     save_queue()
+    httpd.server_close()
+    logging.info('<= Stopping httpd =>\n')
 
 
 def save_queue():
     global work_dir, dvrip_load_on_run, download_files_queue
     if len(download_files_queue) > 0:
         s = os.path.join(work_dir, dvrip_load_on_run)
-        logging.info(f'  Saving the queue with {len(download_files_queue)} tasks to {s}\n')
+        logging.info(f'~ Saving the queue with {len(download_files_queue)} tasks to {s}')
         with open(s, 'wt') as f:
             f.write(json.dumps(download_files_queue))
+        download_files_queue = []
 
 
 def reinstall_service():
-    logging.warning('!!! Service ReInstallation !!!')
+    global download_files_queue
+    logging.warning('! Service ReInstallation')
     save_queue()
     subprocess.Popen(os.path.join(work_dir, 'DvripService-reinstall-start.bat'), creationflags=subprocess.CREATE_NEW_CONSOLE)
 

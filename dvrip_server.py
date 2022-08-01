@@ -178,14 +178,15 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 if crop is not None:
                     flt = f'-filter:v "crop={crop}"'
                 else:
-                    flt = '-c:v copy'
+                    flt = ''
                 if out_fn2 is None:
                     user = self.query['user'][0]
                     password = self.query['password'][0]
                     out.write(f'dvrip_download.exe {ip_address} {user} {password} {event_time_str} 0\n')
                     out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
                     if crop is not None:
-                        out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} {bat_fn}-top.mp4\n')
+                        out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} -c:v copy {bat_fn}-top.mp4\n')
+                        out.write(f'del {out_fn}.mp4\n')
                 else:
                     out.write(f'call dvrip_download.bat {bat_fn}\n')
                     out.write(f'call h264_separate.bat {out_fn}.h264 0\n')

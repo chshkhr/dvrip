@@ -89,6 +89,7 @@ def get_start_end(event_time):
 def download_files(ip_address, user, password, event_time, progress=None, work_dir=''):
     conn = DVRIPClient(Socket(AF_INET, SOCK_STREAM))
     conn.connect((ip_address, DVRIP_PORT), user, password)
+    conn.set_time()
 
     [start, end] = get_start_end(event_time)
 

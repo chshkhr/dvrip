@@ -11,7 +11,7 @@ from .files import GetFiles, FileQuery
 from .info import ActivityInfo, GetInfo, Info, StorageInfo, SystemInfo
 from .log import GetLog, LogQuery
 from .login import ClientLogin, ClientLogout, Hash, KeepAlive
-from .message import Message, Request, EPOCH, Filter, Session, Status
+from .message import Message, Request, EPOCH, Filter, Session, Status, _DTFORMAT
 from .monitor import DoMonitor, Monitor, MonitorAction, MonitorClaim, \
     MonitorParams
 from .operation import DoOperation, GetTime, Machine, MachineOperation, \
@@ -204,16 +204,17 @@ class DVRIPClient(DVRIPConnection):
             raise DVRIPDecodeError('invalid activity info reply')
         return reply.activity
 
-    def time(self, time: Optional[datetime] = None) -> datetime:
-        reply = self.request(GetTime(session=self.session))
-        if reply.gettime is NotImplemented:
-            raise DVRIPDecodeError('invalid get time reply')
-        if time is not None:
-            request = DoOperation(command=Operation.SETTIME,
-                                  session=self.session,
-                                  settime=time)
-            self.request(request)
-        return reply.gettime
+    def set_time(self, time: Optional[datetime] = None) -> datetime:
+        # reply = self.request(GetTime(session=self.session))
+        # if reply.gettime is NotImplemented:
+        #     raise DVRIPDecodeError('invalid get time reply')
+        if time is None:
+            time = datetime.now() #.strftime(_DTFORMAT)
+        request = DoOperation(command=Operation.SETTIME,
+                              session=self.session,
+                              settime=time)
+        self.request(request)
+        # return reply.gettime
 
     def reboot(self) -> None:
         machine = MachineOperation(action=Machine.REBOOT)

@@ -4,7 +4,7 @@ import logging
 from os.path import exists
 
 from dvrip.errors import DVRIPDecodeError, DVRIPRequestError
-from dvrip_download import get_start_end, download_files, TIME_FMT, ONE_FILE_DELTA
+from dvrip_download import get_start_end, download_files, TIME_FMT
 from urllib.parse import urlparse, parse_qs
 from datetime import datetime, timedelta
 import threading
@@ -22,6 +22,7 @@ skipped_files = []
 FILE_TIME_FMT = '-%Y%m%d-%H%M'
 BAT_FILE_TIME_FMT = FILE_TIME_FMT + '-%S'
 last_step = datetime.now()
+DELAY = timedelta(minutes=8)
 
 
 def process_download_files_queue():
@@ -47,10 +48,11 @@ def process_download_files_queue():
                     if qs not in skipped_files:
                         skipped_files.append(qs)
                     raise Exception('Start time greater than now')
-                while datetime.now() - event_time < timedelta(minutes=8):
-                    last_step = datetime.now()
-                    logging.info("# Need some sleep...")
-                    time.sleep(60)
+                if datetime.now() - event_time < DELAY:
+                    logging.info(f"# Delayed download start time {event_time + DELAY}")
+                    while datetime.now() - event_time < DELAY:
+                        last_step = datetime.now()
+                        time.sleep(60)
             except Exception as e:
                 logging.error(e)
                 download_files_queue = download_files_queue[1::]

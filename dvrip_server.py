@@ -237,11 +237,12 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
         except Exception as e:
             logging.error(e)
 
+    logging.info(f'<= Starting DVRIP http server on port {port} =>')
     if exists(dvrip_load_on_run):
         try:
             with open(dvrip_load_on_run, 'rt') as f:
                 download_files_queue = json.loads(f.read())
-            logging.info(f'~~On start loaded the queue with {len(download_files_queue)} tasks ')
+            logging.info(f'~~On server start the queue with {len(download_files_queue)} tasks has been loaded ')
         except Exception as e:
             logging.error(e)
         finally:
@@ -249,7 +250,6 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
 
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
-    logging.info(f'<= Starting httpd on port {port} =>')
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

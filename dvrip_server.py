@@ -174,9 +174,9 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             if 'crop' in self.query:
                 crop = self.query['crop'][0]
             if js is not None:
-                with open(os.path.join(device_work_dir, bat_fn + '.json'), 'w') as out:
+                with open(os.path.join(device_work_dir, bat_fn + '.json'), 'wt') as out:
                     out.write(json.dumps(js, indent=4, sort_keys=True))
-            with open(os.path.join(device_work_dir, bat_fn + '.bat'), 'w') as out:
+            with open(os.path.join(device_work_dir, bat_fn + '.bat'), 'wt') as out:
                 if crop is not None:
                     flt = f'-filter:v "crop={crop}"'
                 else:
@@ -186,15 +186,19 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     password = self.query['password'][0]
                     out.write(f'dvrip_download.exe {ip_address} {user} {password} {event_time_str} 0\n')
                     out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
-                    if crop is not None:
-                        out.write(f'ffmpeg.exe -y -i {out_fn}.mp4 {flt} -c:a copy {bat_fn}-top.mp4\n')
-                        out.write(f'del {out_fn}.mp4\n')
+                    out.write(f'ren {out_fn}.mp4 {bat_fn}.mp4\n')
+                    out.write(f'find_objects {bat_fn}.mp4\n')
+                    out.write(f'if exist {bat_fn}-aicut.bat (\n')
+                    out.write(f' call {bat_fn}-aicut.bat (\n')
+                    out.write(f') else (\n')
+                    out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 {flt} -c:a copy {bat_fn}-top.mp4\n')
+                    out.write(')\n')
+                    out.write(f'IF x%1x==xdx del {bat_fn}.mp4\n')
                 else:
                     out.write(f'call dvrip_download.bat {bat_fn}\n')
                     out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
                     out.write(f'call h264_separate.bat {out_fn2}.h264 0\n')
-                    out.write(
-                        f'(echo file {out_fn}.mp4 & echo file {out_fn2}.mp4)>list.txt\n')
+                    out.write(f'(echo file {out_fn}.mp4 & echo file {out_fn2}.mp4)>list.txt\n')
                     out.write(
                         f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -codec copy -c:a copy {bat_fn}.mp4\n')
                     out.write('del list.txt\n')
@@ -203,14 +207,18 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                         sec = sec - 30
                     else:
                         sec = sec + 30
-                    out.write(
-                        f'ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} -c:a copy {bat_fn}-top.mp4\n')
+                    out.write(f'find_objects {bat_fn}.mp4\n')
+                    out.write(f'if exist {bat_fn}-aicut.bat (\n')
+                    out.write(f' call {bat_fn}-aicut.bat (\n')
+                    out.write(f') else (\n')
+                    out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} -c:a copy {bat_fn}-top.mp4\n')
+                    out.write(')\n')
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
-                    out.write(f'del {bat_fn}.mp4\n')
-                    out.write(f'del {out_fn}.mp4\n')
+                    out.write(f'IF x%1x==xdx del {bat_fn}.mp4\n')
+                    out.write(f'IF x%1x==xdx del {out_fn}.mp4\n')
                 out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
                 if out_fn2 is not None:
-                    out.write(f'del {out_fn2}.mp4\n')
+                    out.write(f'IF x%1x==xdx del {out_fn2}.mp4\n')
         except Exception as e:
             logging.error(f'  Json/bat processing error: {e}')
 

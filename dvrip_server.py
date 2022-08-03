@@ -177,10 +177,6 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 with open(os.path.join(device_work_dir, bat_fn + '.json'), 'wt') as out:
                     out.write(json.dumps(js, indent=4, sort_keys=True))
             with open(os.path.join(device_work_dir, bat_fn + '.bat'), 'wt') as out:
-                if crop is not None:
-                    flt = f'-filter:v "crop={crop}"'
-                else:
-                    flt = '-c:v copy'
                 if out_fn2 is None:
                     user = self.query['user'][0]
                     password = self.query['password'][0]
@@ -191,6 +187,10 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f'if exist {bat_fn}-aicut.bat (\n')
                     out.write(f' call {bat_fn}-aicut.bat (\n')
                     out.write(f') else (\n')
+                    if crop is not None:
+                        flt = f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M -filter:v "crop={crop}"'
+                    else:
+                        flt = '-c:v copy'
                     out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 {flt} -c:a copy {bat_fn}-top.mp4\n')
                     out.write(')\n')
                     out.write(f'IF x%1x==xdx del {bat_fn}.mp4\n')
@@ -200,7 +200,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f'call h264_separate.bat {out_fn2}.h264 0\n')
                     out.write(f'(echo file {out_fn}.mp4 & echo file {out_fn2}.mp4)>list.txt\n')
                     out.write(
-                        f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -codec copy -c:a copy {bat_fn}.mp4\n')
+                        f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -c:v copy -c:a copy {bat_fn}.mp4\n')
                     out.write('del list.txt\n')
                     sec = event_time.second
                     if sec >= 30:
@@ -211,7 +211,12 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f'if exist {bat_fn}-aicut.bat (\n')
                     out.write(f' call {bat_fn}-aicut.bat (\n')
                     out.write(f') else (\n')
-                    out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} -c:a copy {bat_fn}-top.mp4\n')
+                    if crop is not None:
+                        flt = f'-filter:v "crop={crop}"'
+                    else:
+                        flt = ''
+                    out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} '
+                              f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M -c:a copy {bat_fn}-top.mp4\n')
                     out.write(')\n')
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
                     out.write(f'IF x%1x==xdx del {bat_fn}.mp4\n')

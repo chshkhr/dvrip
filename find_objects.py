@@ -81,7 +81,11 @@ def main():
         first = max(int(prediction['first'])-3, 0)
         count = int(prediction['count'])
         last = min(int(prediction['last'])+3,count)
-        s = f'ffmpeg.exe -y -i {in_file} -ss 0:{first//60}:{first%60} -t 0:{(last-first)//60}:{(last-first)%60} -filter:v "crop={x_max-x_min}:{y_max-y_min}:{x_min}:{y_min}" -c:a copy {name}-cut.mp4'
+        s = f'ffmpeg.exe -y -i {in_file} ' \
+            f'-ss 0:{first//60}:{first%60} -t 0:{(last-first)//60}:{(last-first)%60} ' \
+            f'-filter:v "crop={x_max-x_min}:{y_max-y_min}:{x_min}:{y_min}" ' \
+            f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M ' \
+            f'-c:a copy {name}-cut.mp4'
         print(s)
         with open(f'{name}-aicut.bat', 'wt') as bat:  # in_file.rsplit('.', 1)[0]
             bat.write(s+'\n')

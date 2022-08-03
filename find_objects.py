@@ -18,7 +18,7 @@ frame_max_y = None
 MARGIN = 0.1
 margin_x = None
 margin_y = None
-
+OBJ_SET = ['person', 'car', 'cat', 'dog']
 
 def process_dir(directory):
     global frame_max_x, frame_max_y, MARGIN, margin_x, margin_y
@@ -46,23 +46,31 @@ def process_dir(directory):
             ).json()
 
             if response['success']:
-                for prediction in response['predictions']:
-                    label = prediction['label']
-                    if label in ['person', 'car', 'cat', 'dog']:
-                        index = int(file_name[-7:-4])
-                        print(f'Frame {index}: {label}')
-                        if result_prediction is None:
-                            result_prediction = prediction
-                            result_prediction['first'] = index
-                        else:
-                            result_prediction['last'] = index
-                            result_prediction['y_min'] = min(prediction['y_min'], result_prediction['y_min'])
-                            result_prediction['x_min'] = min(prediction['x_min'], result_prediction['x_min'])
-                            result_prediction['y_max'] = max(prediction['y_max'], result_prediction['y_max'])
-                            result_prediction['x_max'] = max(prediction['x_max'], result_prediction['x_max'])
-                            result_prediction['confidence'] = min(prediction['confidence'], result_prediction['confidence'])
-                            if not prediction['label'] in result_prediction['label']:
-                                result_prediction['label'] += prediction['label']
+                predictions = response['predictions']
+                if len(predictions) == 0:
+                    os.remove(filepath)
+                else:
+                    for prediction in predictions:
+                        label = prediction['label']
+                        found = False
+                        if label in OBJ_SET:
+                            found = True
+                            index = int(file_name[-7:-4])
+                            print(f'Frame {index}: {label}')
+                            if result_prediction is None:
+                                result_prediction = prediction
+                                result_prediction['first'] = index
+                            else:
+                                result_prediction['last'] = index
+                                result_prediction['y_min'] = min(prediction['y_min'], result_prediction['y_min'])
+                                result_prediction['x_min'] = min(prediction['x_min'], result_prediction['x_min'])
+                                result_prediction['y_max'] = max(prediction['y_max'], result_prediction['y_max'])
+                                result_prediction['x_max'] = max(prediction['x_max'], result_prediction['x_max'])
+                                result_prediction['confidence'] = min(prediction['confidence'], result_prediction['confidence'])
+                                if not prediction['label'] in result_prediction['label']:
+                                    result_prediction['label'] += prediction['label']
+                    if not found:
+                        os.remove(filepath)
             continue
         else:
             continue
@@ -107,7 +115,7 @@ def main():
             bat.write(s+'\n')
         with open(f'{name}.json', 'wt') as out:
             out.write(json.dumps(prediction, indent=4, sort_keys=True))
-    shutil.rmtree(name)
+    #shutil.rmtree(name)
 
 
 if __name__ == "__main__":

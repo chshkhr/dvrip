@@ -5,7 +5,7 @@ import subprocess
 from datetime import timedelta
 from pathlib import Path
 from sys import argv
-
+from PIL import Image
 import requests
 
 serverPort = 5000
@@ -13,14 +13,29 @@ serverHost = "localhost"
 serverUrl = f"http://{serverHost}:{serverPort}/v1/"
 verifySslCert = False
 minConfidence = 0.4
+frame_max_x = None
+frame_max_y = None
+MARGIN = 0.1
+margin_x = None
+margin_y = None
 
 
 def process_dir(directory):
+    global frame_max_x, frame_max_y, MARGIN, margin_x, margin_y
     result_prediction = None
     index = None
     for file_name in os.listdir(directory):
         if file_name.endswith(".jpg"):
             filepath = os.path.join(directory, file_name)
+
+            if frame_max_x is None:
+                img = Image.open(filepath)
+                frame_max_x, frame_max_y = img.size
+                margin_x = round(frame_max_x * MARGIN)
+                margin_y = round(frame_max_y * MARGIN)
+                print(f'{frame_max_x}x{frame_max_y}')
+                img.close()
+
             image_data = open(filepath, "rb").read()
 
             response = requests.post(
@@ -62,6 +77,7 @@ def extract_frames(file_name):
 
 
 def main():
+    global frame_max_x, frame_max_y, MARGIN, margin_x, margin_y
     in_file = argv[1]
     print('Extraction started\n')
     extract_frames(in_file)
@@ -70,20 +86,20 @@ def main():
     prediction = process_dir(name)
     if prediction is not None:
         print(prediction)
-        # x_max = min(prediction['x_max']+10, 2592)
-        # y_max = min(prediction['y_max']+10, 1944)
-        # x_min = max(prediction['x_min']-10, 0)
-        # y_min = max(prediction['y_min']-10, 0)
         y_max = prediction['y_max']
         x_min = prediction['x_min']
         x_max = prediction['x_max']
         y_min = prediction['y_min']
+        wid = min(round((x_max - x_min) * (1 + MARGIN)), frame_max_x)
+        hgt = min(round((y_max - y_min) * (1 + MARGIN)), frame_max_y)
+        shift_x = max(x_min - margin_x//2, 0)
+        shift_y = max(y_min - margin_y//2, 0)
         first = max(int(prediction['first'])-3, 0)
         count = int(prediction['count'])
         last = min(int(prediction['last'])+3,count)
         s = f'ffmpeg.exe -y -i {in_file} ' \
             f'-ss 0:{first//60}:{first%60} -t 0:{(last-first)//60}:{(last-first)%60} ' \
-            f'-filter:v "crop={x_max-x_min}:{y_max-y_min}:{x_min}:{y_min}" ' \
+            f'-filter:v "crop={wid}:{hgt}:{shift_x}:{shift_y}" ' \
             f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M ' \
             f'-c:a copy {name}-cut.mp4'
         print(s)

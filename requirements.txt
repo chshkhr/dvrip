@@ -5,3 +5,4 @@ hypothesis~=6.52.4
 mock~=4.0.3
 pytest~=7.1.2
 future~=0.18.2
+Pillow~=9.2.0

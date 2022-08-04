@@ -23,7 +23,6 @@ FILE_TIME_FMT = '-%Y%m%d-%H%M'
 BAT_FILE_TIME_FMT = FILE_TIME_FMT + '-%S'
 last_step = datetime.now()
 DNL_DELAY = timedelta(minutes=8)
-BAT_DELAY = timedelta(minutes=4)
 
 
 def process_finished_files():
@@ -76,11 +75,8 @@ def process_download_files_queue():
                 if datetime.now() - event_time < DNL_DELAY:
                     logging.info(f"# Delayed download start time {event_time + DNL_DELAY}")
                     while datetime.now() - event_time < DNL_DELAY:
-                        last_step = datetime.now()
-                        if datetime.now() - event_time > BAT_DELAY:
-                            process_finished_files()
-                        else:
-                            time.sleep(60)
+                        process_finished_files()
+                        time.sleep(60)
             except Exception as e:
                 logging.error(e)
                 download_files_queue = download_files_queue[1::]

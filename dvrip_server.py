@@ -22,7 +22,32 @@ skipped_files = []
 FILE_TIME_FMT = '-%Y%m%d-%H%M'
 BAT_FILE_TIME_FMT = FILE_TIME_FMT + '-%S'
 last_step = datetime.now()
-DELAY = timedelta(minutes=8)
+DNL_DELAY = timedelta(minutes=8)
+BAT_DELAY = timedelta(minutes=4)
+
+
+def process_finished_files():
+    global finished_files
+    if len(finished_files) > 0:
+        try:
+            finished_file = finished_files[0]
+            ip_address = finished_file['camip'][0]
+            ip4 = ip_address.split('.')[3]
+            name = finished_file['name'][0]
+            device_work_dir = os.path.join(work_dir, name)
+            event_time_str = finished_file['event_time'][0]
+            event_time = datetime.strptime(event_time_str, TIME_FMT)
+            bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT) + '.bat'
+            logging.info(f'% Now running {bat_fn}')
+            process = subprocess.Popen(os.path.join(device_work_dir, bat_fn),
+                                       cwd=device_work_dir,
+                                       creationflags=subprocess.CREATE_NEW_CONSOLE)
+            process.wait()
+            logging.info(f'% Finished running {bat_fn}')
+        except Exception as e:
+            logging.error(e)
+        finally:
+            finished_files = finished_files[1::]
 
 
 def process_download_files_queue():
@@ -48,11 +73,14 @@ def process_download_files_queue():
                     if qs not in skipped_files:
                         skipped_files.append(qs)
                     raise Exception('Start time greater than now')
-                if datetime.now() - event_time < DELAY:
-                    logging.info(f"# Delayed download start time {event_time + DELAY}")
-                    while datetime.now() - event_time < DELAY:
+                if datetime.now() - event_time < DNL_DELAY:
+                    logging.info(f"# Delayed download start time {event_time + DNL_DELAY}")
+                    while datetime.now() - event_time < DNL_DELAY:
                         last_step = datetime.now()
-                        time.sleep(60)
+                        if datetime.now() - event_time > BAT_DELAY:
+                            process_finished_files()
+                        else:
+                            time.sleep(60)
             except Exception as e:
                 logging.error(e)
                 download_files_queue = download_files_queue[1::]
@@ -80,7 +108,9 @@ def process_download_files_queue():
                     time.sleep(30)
             if len(download_files_queue) == 0:
                 logging.info("  The download queue is empty :)")
+                process_finished_files()
         else:
+            process_finished_files()
             time.sleep(10)
             for sf in skipped_files:
                 if sf not in download_files_queue:
@@ -255,7 +285,7 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
         try:
             with open(dvrip_load_on_run, 'rt') as f:
                 download_files_queue = json.loads(f.read())
-            logging.info(f'~~On server start the queue with {len(download_files_queue)} tasks has been loaded ')
+            logging.info(f'~ On server start the queue with {len(download_files_queue)} tasks has been loaded ')
         except Exception as e:
             logging.error(e)
         finally:
@@ -286,7 +316,8 @@ def reinstall_service():
     global download_files_queue
     logging.warning('! Service ReInstallation')
     save_queue()
-    subprocess.Popen(os.path.join(work_dir, 'DvripService-reinstall-start.bat'), creationflags=subprocess.CREATE_NEW_CONSOLE)
+    subprocess.Popen(os.path.join(work_dir, 'DvripService-reinstall-start.bat'),
+                     creationflags=subprocess.CREATE_NEW_CONSOLE)
 
 
 def daemon():

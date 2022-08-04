@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from datetime import timedelta
 from pathlib import Path
 from sys import argv
@@ -19,9 +20,11 @@ MARGIN = 0.1
 margin_x = None
 margin_y = None
 OBJ_SET = ['person', 'car', 'cat', 'dog']
+sleep_between_requests = 0.4
+
 
 def process_dir(directory):
-    global frame_max_x, frame_max_y, MARGIN, margin_x, margin_y
+    global frame_max_x, frame_max_y, MARGIN, margin_x, margin_y, sleep_between_requests
     result_prediction = None
     index = None
     for file_name in os.listdir(directory):
@@ -71,7 +74,8 @@ def process_dir(directory):
                                     result_prediction['label'] += prediction['label']
                     if not found:
                         os.remove(filepath)
-            continue
+            if sleep_between_requests > 0:
+                time.sleep(sleep_between_requests)
         else:
             continue
     if result_prediction is not None and index is not None:
@@ -85,8 +89,10 @@ def extract_frames(file_name):
 
 
 def main():
-    global frame_max_x, frame_max_y, MARGIN, margin_x, margin_y
+    global frame_max_x, frame_max_y, MARGIN, margin_x, margin_y, sleep_between_requests
     in_file = argv[1]
+    if len(argv) > 2:
+        sleep_between_requests = float(argv[2])
     print('Extraction started\n')
     extract_frames(in_file)
     name = Path(in_file).stem
@@ -120,6 +126,6 @@ def main():
 
 if __name__ == "__main__":
     if len(argv) < 2:
-        print('\nUsage: find_objects.exe video_file_name\n')
+        print(f'\nUsage: find_objects.exe video_file_name [sleep_between_requests={sleep_between_requests}]\n')
     else:
         main()

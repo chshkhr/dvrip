@@ -66,7 +66,7 @@ def process_download_files_queue():
                     if not os.path.exists(cur_dir):
                         os.makedirs(cur_dir)
                 event_time = datetime.strptime(qs['event_time'][0], TIME_FMT)
-                msg = f"{ip_address} {event_time}"
+                msg = f"{ip_address} {event_time} ({len(download_files_queue)})"
                 logging.info("^ Processing %s", msg)
                 if event_time > datetime.now():
                     if qs not in skipped_files:
@@ -171,7 +171,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 if self.query not in download_files_queue and \
                         self.query not in finished_files and \
                         self.query not in skipped_files:
-                    logging.info(f"+ Adding {mes} to the queue")
+                    logging.info(f"+ Adding {mes} to the queue ({len(download_files_queue)})")
                     download_files_queue.append(self.query)
                 else:
                     logging.info(f"~ The query {mes} is already in some list")

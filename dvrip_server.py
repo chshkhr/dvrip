@@ -263,7 +263,7 @@ dvrip_load_on_run = 'dvrip_load_on_run.json'
 
 
 def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
-    global work_dir, dvrip_load_on_run, download_files_queue
+    global work_dir, dvrip_load_on_run, download_files_queue, finished_files
     logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
                         level=logging.INFO,
                         datefmt='%d-%m-%Y %H:%M:%S',
@@ -285,7 +285,7 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
     if exists(dvrip_load_on_run):
         try:
             with open(dvrip_load_on_run, 'rt') as f:
-                download_files_queue = json.loads(f.read())
+                [download_files_queue, finished_files] = json.loads(f.read())
             logging.info(f'~ On server start the queue with {len(download_files_queue)} tasks has been loaded ')
         except Exception as e:
             logging.error(e)
@@ -304,12 +304,12 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
 
 
 def save_queue():
-    global work_dir, dvrip_load_on_run, download_files_queue
+    global work_dir, dvrip_load_on_run, download_files_queue, finished_files
     if len(download_files_queue) > 0:
         s = os.path.join(work_dir, dvrip_load_on_run)
         logging.info(f'~ Saving the queue with {len(download_files_queue)} tasks to {s}')
         with open(s, 'wt') as f:
-            f.write(json.dumps(download_files_queue))
+            f.write(json.dumps([download_files_queue, finished_files]))
         download_files_queue = []
 
 

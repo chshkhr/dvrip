@@ -311,6 +311,7 @@ def save_queue():
 def reinstall_service():
     global download_files_queue
     logging.warning('! Service ReInstallation')
+    download_files_queue = download_files_queue[1::] + download_files_queue[0:1:]
     save_queue()
     subprocess.Popen(os.path.join(work_dir, 'DvripService-reinstall-start.bat'),
                      creationflags=subprocess.CREATE_NEW_CONSOLE)

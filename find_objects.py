@@ -20,7 +20,7 @@ MARGIN = 0.1
 margin_x = None
 margin_y = None
 OBJ_SET = ['person', 'car', 'cat', 'dog']
-sleep_between_requests = 0.2
+sleep_between_requests = 0.5
 
 
 def process_dir(directory):

@@ -37,12 +37,12 @@ def process_finished_files():
             event_time_str = finished_file['event_time'][0]
             event_time = datetime.strptime(event_time_str, TIME_FMT)
             bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT) + '.bat'
-            logging.info(f'% Now running {bat_fn}')
+            logging.info(f'% Now running {bat_fn} [{len(finished_files)}]')
             process = subprocess.Popen(os.path.join(device_work_dir, bat_fn),
                                        cwd=device_work_dir,
                                        creationflags=subprocess.CREATE_NEW_CONSOLE)
             process.wait()
-            logging.info(f'% Finished running {bat_fn}')
+            logging.info(f'% Finished running {bat_fn} [{len(finished_files)}]')
         except Exception as e:
             logging.error(e)
         finally:
@@ -196,6 +196,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             out_fn2 = None
             if end - start > timedelta(minutes=1):
                 out_fn2 = ip4 + end.strftime(FILE_TIME_FMT)
+            find_objects = 'find_objects' not in self.query or self.query['find_objects'] == '1'
             crop = None
             if 'crop' in self.query:
                 crop = self.query['crop'][0]
@@ -209,16 +210,18 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f'dvrip_download.exe {ip_address} {user} {password} {event_time_str} 0\n')
                     out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
                     out.write(f'ren {out_fn}.mp4 {bat_fn}.mp4\n')
-                    out.write(f'find_objects {bat_fn}.mp4\n')
-                    out.write(f'if exist {bat_fn}-aicut.bat (\n')
-                    out.write(f' call {bat_fn}-aicut.bat (\n')
-                    out.write(f') else (\n')
+                    if find_objects:
+                        out.write(f'find_objects {bat_fn}.mp4\n')
+                        out.write(f'if exist {bat_fn}-aicut.bat (\n')
+                        out.write(f' call {bat_fn}-aicut.bat (\n')
+                        out.write(f') else (\n')
                     if crop is not None:
                         flt = f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M -filter:v "crop={crop}"'
                     else:
                         flt = '-c:v copy'
                     out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 {flt} -c:a copy {bat_fn}-top.mp4\n')
-                    out.write(')\n')
+                    if find_objects:
+                        out.write(')\n')
                     out.write(f'IF x%1x==xdx del {bat_fn}.mp4\n')
                 else:
                     out.write(f'call dvrip_download.bat {bat_fn}\n')
@@ -233,17 +236,19 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                         sec = sec - 30
                     else:
                         sec = sec + 30
-                    out.write(f'find_objects {bat_fn}.mp4\n')
-                    out.write(f'if exist {bat_fn}-aicut.bat (\n')
-                    out.write(f' call {bat_fn}-aicut.bat (\n')
-                    out.write(f') else (\n')
+                    if find_objects:
+                        out.write(f'find_objects {bat_fn}.mp4\n')
+                        out.write(f'if exist {bat_fn}-aicut.bat (\n')
+                        out.write(f' call {bat_fn}-aicut.bat (\n')
+                        out.write(f') else (\n')
                     if crop is not None:
                         flt = f'-filter:v "crop={crop}"'
                     else:
                         flt = ''
                     out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} '
                               f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M -c:a copy {bat_fn}-top.mp4\n')
-                    out.write(')\n')
+                    if find_objects:
+                        out.write(')\n')
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
                     out.write(f'IF x%1x==xdx del {bat_fn}.mp4\n')
                     out.write(f'IF x%1x==xdx del {out_fn}.mp4\n')

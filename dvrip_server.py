@@ -258,6 +258,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f'move  {out_fn2}.mp4 trash_bin\n')
                 out.write(f'move {bat_fn} trash_bin\n')
                 out.write(f'move {bat_fn}*.bat trash_bin\n')
+                out.write(f'move {bat_fn}-???.mp4 ../GDLink\n')
         except Exception as e:
             logging.error(f'  Json/bat processing error: {e}')
 

@@ -1,7 +1,7 @@
 requests~=2.28.1
-setuptools~=60.2.0
+setuptools==63.4.1
 dvrip~=0.0.3.dev29+gf6d8d70
-hypothesis~=6.52.4
+hypothesis==6.54.1
 mock~=4.0.3
 pytest~=7.1.2
 future~=0.18.2

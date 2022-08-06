@@ -204,6 +204,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 with open(os.path.join(device_work_dir, bat_fn + '.json'), 'wt') as out:
                     out.write(json.dumps(js, indent=4, sort_keys=True))
             with open(os.path.join(device_work_dir, bat_fn + '.bat'), 'wt') as out:
+                out.write('IF not exist trash_bin mkdir trash_bin\n')
                 if out_fn2 is None:
                     user = self.query['user'][0]
                     password = self.query['password'][0]
@@ -222,7 +223,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 {flt} -c:a copy {bat_fn}-top.mp4\n')
                     if find_objects:
                         out.write(')\n')
-                    out.write(f'IF x%1x==xdx del {bat_fn}.mp4\n')
+                    out.write(f'move {bat_fn}.mp4 trash_bin\n')
                 else:
                     out.write(f'call dvrip_download.bat {bat_fn}\n')
                     out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
@@ -250,11 +251,13 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     if find_objects:
                         out.write(')\n')
                     out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
-                    out.write(f'IF x%1x==xdx del {bat_fn}.mp4\n')
-                    out.write(f'IF x%1x==xdx del {out_fn}.mp4\n')
+                    out.write(f'move {bat_fn}.mp4 trash_bin\n')
+                    out.write(f'move {out_fn}.mp4 trash_bin\n')
                 out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
                 if out_fn2 is not None:
-                    out.write(f'IF x%1x==xdx del {out_fn2}.mp4\n')
+                    out.write(f'move  {out_fn2}.mp4 trash_bin\n')
+                out.write(f'move {out_fn} trash_bin\n')
+                out.write(f'move {bat_fn}*.bat trash_bin\n')
         except Exception as e:
             logging.error(f'  Json/bat processing error: {e}')
 

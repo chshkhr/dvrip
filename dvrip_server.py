@@ -254,7 +254,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 out.write(f'move {out_fn}.mp4 trash_bin\n')
             out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
             if out_fn2 is not None:
-                out.write(f'move  {out_fn2}.mp4 trash_bin\n')
+                out.write(f'move {out_fn2}.mp4 trash_bin\n')
             out.write(f'move {bat_fn} trash_bin\n')
             out.write(f'move {bat_fn}-cut.mp4 ../GDLink\n')
             out.write(f'move {bat_fn}.json trash_bin\n')

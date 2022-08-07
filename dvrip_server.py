@@ -257,7 +257,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 if out_fn2 is not None:
                     out.write(f'move  {out_fn2}.mp4 trash_bin\n')
                 out.write(f'move {bat_fn} trash_bin\n')
-                out.write(f'move {bat_fn}-???.mp4 ../GDLink\n')
+                out.write(f'move {bat_fn}-cut.mp4 ../GDLink\n')
                 out.write(f'move {bat_fn}.json trash_bin\n')
                 out.write(f'move {bat_fn}*.bat trash_bin\n')
         except Exception as e:
@@ -310,12 +310,12 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
 
 def save_queue():
     global work_dir, dvrip_load_on_run, download_files_queue, finished_files
-    if len(download_files_queue) > 0:
-        s = os.path.join(work_dir, dvrip_load_on_run)
-        logging.info(f'~ Saving the queue with {len(download_files_queue)} tasks to {s}')
-        with open(s, 'wt') as f:
+    if len(download_files_queue)+len(finished_files) > 0:
+        logging.info(f'~ Saving the queue ({len(download_files_queue)}) and tasks [{len(finished_files)}] to {dvrip_load_on_run}')
+        with open(os.path.join(work_dir, dvrip_load_on_run), 'wt') as f:
             f.write(json.dumps([download_files_queue, finished_files]))
         download_files_queue = []
+        finished_files = []
 
 
 def reinstall_service():

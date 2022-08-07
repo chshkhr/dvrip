@@ -108,9 +108,9 @@ def main():
         hgt = min(round((y_max - y_min) * (1 + MARGIN)), frame_max_y)
         shift_x = max(x_min - margin_x//2, 0)
         shift_y = max(y_min - margin_y//2, 0)
-        first = max(int(prediction['first'])-5, 0)
+        first = max(int(prediction['first'])-3, 0)
         count = int(prediction['count'])
-        last = min(int(prediction['last'])+2,count)
+        last = min(int(prediction['last'])+1, count)
         s = f'ffmpeg.exe -hide_banner -y -i {in_file} ' \
             f'-ss 0:{first//60}:{first%60} -t 0:{(last-first)//60}:{(last-first)%60} ' \
             f'-filter:v "crop={wid}:{hgt}:{shift_x}:{shift_y}" ' \

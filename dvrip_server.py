@@ -288,7 +288,7 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
         try:
             with open(dvrip_load_on_run, 'rt') as f:
                 [download_files_queue, finished_files] = json.loads(f.read())
-            logging.info(f'~ On server start the queue with {len(download_files_queue)} tasks has been loaded ')
+            logging.info(f'~ On server start the queue ({len(download_files_queue)})-[{len(finished_files)}] has been loaded ')
         except Exception as e:
             logging.error(e)
         finally:
@@ -308,7 +308,7 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
 def save_queue():
     global work_dir, dvrip_load_on_run, download_files_queue, finished_files
     if len(download_files_queue)+len(finished_files) > 0:
-        logging.info(f'~ Saving the queue ({len(download_files_queue)}) and tasks [{len(finished_files)}] to {dvrip_load_on_run}')
+        logging.info(f'~ Saving the queue ({len(download_files_queue)})-[{len(finished_files)}] to {dvrip_load_on_run}')
         with open(os.path.join(work_dir, dvrip_load_on_run), 'wt') as f:
             f.write(json.dumps([download_files_queue, finished_files]))
         download_files_queue = []
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     if len(argv) == 3:
         work_dir = argv[2]
 
-    dvrip_load_on_run = os.path.join(work_dir, dvrip_load_on_run)
+    # dvrip_load_on_run = os.path.join(work_dir, dvrip_load_on_run)
 
     if len(argv) >= 2:
         run(port=int(argv[1]))

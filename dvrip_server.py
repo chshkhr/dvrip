@@ -288,7 +288,7 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
         try:
             with open(dvrip_load_on_run, 'rt') as f:
                 [download_files_queue, finished_files] = json.loads(f.read())
-            logging.info(f'~ On server start the queue ({len(download_files_queue)})-[{len(finished_files)}] has been loaded ')
+            logging.info(f'~ On server start the queue ({len(download_files_queue)})-[{len(finished_files)}] has been loaded')
         except Exception as e:
             logging.error(e)
         finally:

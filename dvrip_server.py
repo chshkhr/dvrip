@@ -130,14 +130,14 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            self._set_response()
             s = "GET request from {} for {}".format(self.client_address, self.path)
-            self.wfile.write(s.encode('utf-8'))
             logging.info(s)
             self.query = parse_qs(urlparse(self.path).query)
             self.create_bat_and_json()
+            self._set_response()
+            self.wfile.write(s.encode('utf-8'))
         except Exception as e:
-            logging.error(e)
+            logging.error(f'  Incorrect GET request "{e}"')
         else:
             if 'reinstall_service' in self.query and self.query['reinstall_service'][0] == '1':
                 reinstall_service()
@@ -147,9 +147,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             s = "POST request from {} for {}".format(self.client_address, self.path)
-            self.wfile.write(s.encode('utf-8'))
             logging.info(s)
-            self._set_response()
             self.query = parse_qs(urlparse(self.path).query)
             content_length = int(self.headers['Content-Length'])  # <--- Gets the size of data
             if content_length == 0:
@@ -157,8 +155,10 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             else:
                 post_data = self.rfile.read(content_length)  # <--- Gets the data itself
                 self.create_bat_and_json(json.loads(post_data.decode('utf-8')))
+            self.wfile.write(s.encode('utf-8'))
+            self._set_response()
         except Exception as e:
-            logging.error(e)
+            logging.error(f'  Incorrect POST request: "{e}"')
         else:
             self.download()
 
@@ -179,89 +179,86 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             logging.warning(f'  Ignore incorrect request: there is no {e}')
 
     def create_bat_and_json(self, js=None):
-        try:
-            ip_address = self.query['camip'][0]
-            ip4 = ip_address.split('.')[3]
-            if self.query['event_time'][0].lower() == 'now':
-                self.query['event_time'][0] = datetime.now().strftime(TIME_FMT)
-            name = self.query['name'][0]
-            device_work_dir = os.path.join(work_dir, name)
-            if not os.path.exists(device_work_dir):
-                os.makedirs(device_work_dir)
-            event_time_str = self.query['event_time'][0]
-            event_time = datetime.strptime(event_time_str, TIME_FMT)
-            [start, end] = get_start_end(event_time)
-            bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
-            out_fn = ip4 + start.strftime(FILE_TIME_FMT)
-            out_fn2 = None
-            if end - start > timedelta(minutes=1):
-                out_fn2 = ip4 + end.strftime(FILE_TIME_FMT)
-            find_objects = 'find_objects' not in self.query or self.query['find_objects'] == '1'
-            crop = None
-            if 'crop' in self.query:
-                crop = self.query['crop'][0]
-            if js is not None:
-                with open(os.path.join(device_work_dir, bat_fn + '.json'), 'wt') as out:
-                    out.write(json.dumps(js, indent=4, sort_keys=True))
-            with open(os.path.join(device_work_dir, bat_fn + '.bat'), 'wt') as out:
-                out.write('IF not exist trash_bin mkdir trash_bin\n')
-                if out_fn2 is None:
-                    user = self.query['user'][0]
-                    password = self.query['password'][0]
-                    out.write(f'dvrip_download.exe {ip_address} {user} {password} {event_time_str} 0\n')
-                    out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
-                    out.write(f'ren {out_fn}.mp4 {bat_fn}.mp4\n')
-                    if find_objects:
-                        out.write(f'find_objects {bat_fn}.mp4\n')
-                        out.write(f'if exist {bat_fn}-aicut.bat (\n')
-                        out.write(f' call {bat_fn}-aicut.bat (\n')
-                        out.write(f') else (\n')
-                    if crop is not None:
-                        flt = f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M -filter:v "crop={crop}"'
-                    else:
-                        flt = '-c:v copy'
-                    out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 {flt} -c:a copy {bat_fn}-top.mp4\n')
-                    if find_objects:
-                        out.write(')\n')
-                    out.write(f'move {bat_fn}.mp4 trash_bin\n')
+        ip_address = self.query['camip'][0]
+        ip4 = ip_address.split('.')[3]
+        if self.query['event_time'][0].lower() == 'now':
+            self.query['event_time'][0] = datetime.now().strftime(TIME_FMT)
+        name = self.query['name'][0]
+        device_work_dir = os.path.join(work_dir, name)
+        if not os.path.exists(device_work_dir):
+            os.makedirs(device_work_dir)
+        event_time_str = self.query['event_time'][0]
+        event_time = datetime.strptime(event_time_str, TIME_FMT)
+        [start, end] = get_start_end(event_time)
+        bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT)
+        out_fn = ip4 + start.strftime(FILE_TIME_FMT)
+        out_fn2 = None
+        if end - start > timedelta(minutes=1):
+            out_fn2 = ip4 + end.strftime(FILE_TIME_FMT)
+        find_objects = 'find_objects' not in self.query or self.query['find_objects'] == '1'
+        crop = None
+        if 'crop' in self.query:
+            crop = self.query['crop'][0]
+        if js is not None:
+            with open(os.path.join(device_work_dir, bat_fn + '.json'), 'wt') as out:
+                out.write(json.dumps(js, indent=4, sort_keys=True))
+        with open(os.path.join(device_work_dir, bat_fn + '.bat'), 'wt') as out:
+            out.write('IF not exist trash_bin mkdir trash_bin\n')
+            if out_fn2 is None:
+                user = self.query['user'][0]
+                password = self.query['password'][0]
+                out.write(f'dvrip_download.exe {ip_address} {user} {password} {event_time_str} 0\n')
+                out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
+                out.write(f'ren {out_fn}.mp4 {bat_fn}.mp4\n')
+                if find_objects:
+                    out.write(f'find_objects {bat_fn}.mp4\n')
+                    out.write(f'if exist {bat_fn}-aicut.bat (\n')
+                    out.write(f' call {bat_fn}-aicut.bat (\n')
+                    out.write(f') else (\n')
+                if crop is not None:
+                    flt = f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M -filter:v "crop={crop}"'
                 else:
-                    out.write(f'call dvrip_download.bat {bat_fn}\n')
-                    out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
-                    out.write(f'call h264_separate.bat {out_fn2}.h264 0\n')
-                    out.write(f'(echo file {out_fn}.mp4 & echo file {out_fn2}.mp4)>list.txt\n')
-                    out.write(
-                        f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -c:v copy -c:a copy {bat_fn}.mp4\n')
-                    out.write('del list.txt\n')
-                    sec = event_time.second
-                    if sec >= 30:
-                        sec = sec - 30
-                    else:
-                        sec = sec + 30
-                    if find_objects:
-                        out.write(f'find_objects {bat_fn}.mp4\n')
-                        out.write(f'if exist {bat_fn}-aicut.bat (\n')
-                        out.write(f' call {bat_fn}-aicut.bat (\n')
-                        out.write(f') else (\n')
-                    if crop is not None:
-                        flt = f'-filter:v "crop={crop}"'
-                    else:
-                        flt = ''
-                    out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} '
-                              f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M -c:a copy {bat_fn}-top.mp4\n')
-                    if find_objects:
-                        out.write(')\n')
-                    out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
-                    out.write(f'move {bat_fn}.mp4 trash_bin\n')
-                    out.write(f'move {out_fn}.mp4 trash_bin\n')
-                out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
-                if out_fn2 is not None:
-                    out.write(f'move  {out_fn2}.mp4 trash_bin\n')
-                out.write(f'move {bat_fn} trash_bin\n')
-                out.write(f'move {bat_fn}-cut.mp4 ../GDLink\n')
-                out.write(f'move {bat_fn}.json trash_bin\n')
-                out.write(f'move {bat_fn}*.bat trash_bin\n')
-        except Exception as e:
-            logging.error(f'  Json/bat processing error: {e}')
+                    flt = '-c:v copy'
+                out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 {flt} -c:a copy {bat_fn}-top.mp4\n')
+                if find_objects:
+                    out.write(')\n')
+                out.write(f'move {bat_fn}.mp4 trash_bin\n')
+            else:
+                out.write(f'call dvrip_download.bat {bat_fn}\n')
+                out.write(f'call h264_separate.bat {out_fn}.h264 0\n')
+                out.write(f'call h264_separate.bat {out_fn2}.h264 0\n')
+                out.write(f'(echo file {out_fn}.mp4 & echo file {out_fn2}.mp4)>list.txt\n')
+                out.write(
+                    f'ffmpeg.exe -f h264 -f concat -safe 0 -y -i list.txt -c:v copy -c:a copy {bat_fn}.mp4\n')
+                out.write('del list.txt\n')
+                sec = event_time.second
+                if sec >= 30:
+                    sec = sec - 30
+                else:
+                    sec = sec + 30
+                if find_objects:
+                    out.write(f'find_objects {bat_fn}.mp4\n')
+                    out.write(f'if exist {bat_fn}-aicut.bat (\n')
+                    out.write(f' call {bat_fn}-aicut.bat (\n')
+                    out.write(f') else (\n')
+                if crop is not None:
+                    flt = f'-filter:v "crop={crop}"'
+                else:
+                    flt = ''
+                out.write(f' ffmpeg.exe -y -i {bat_fn}.mp4 -ss 0:0:{sec} -t 0:1:0 {flt} '
+                          f'-c:v h264 -b:v 3M -maxrate 5M -bufsize 2M -c:a copy {bat_fn}-top.mp4\n')
+                if find_objects:
+                    out.write(')\n')
+                out.write(f'IF x%1x==xdx del {out_fn2}.h264\n')
+                out.write(f'move {bat_fn}.mp4 trash_bin\n')
+                out.write(f'move {out_fn}.mp4 trash_bin\n')
+            out.write(f'IF x%1x==xdx del {out_fn}.h264\n')
+            if out_fn2 is not None:
+                out.write(f'move  {out_fn2}.mp4 trash_bin\n')
+            out.write(f'move {bat_fn} trash_bin\n')
+            out.write(f'move {bat_fn}-cut.mp4 ../GDLink\n')
+            out.write(f'move {bat_fn}.json trash_bin\n')
+            out.write(f'move {bat_fn}*.bat trash_bin\n')
 
 
 dvrip_load_on_run = 'dvrip_load_on_run.json'

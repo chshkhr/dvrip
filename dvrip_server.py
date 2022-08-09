@@ -83,7 +83,7 @@ def process_download_files_queue():
                 logging.info(f'- Removing {msg} from the queue ({len(download_files_queue)})')
             else:
                 try:
-                    logging.info(f"^ Started downloading of {msg} {({len(download_files_queue)})}")
+                    logging.info(f"^ Started downloading of {msg} ({len(download_files_queue)})")
                     last_step = datetime.now()
                     k = download_files(ip_address, user, password, event_time, work_dir=cur_dir)
                     finished_files.append(qs)

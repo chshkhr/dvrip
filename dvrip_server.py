@@ -42,11 +42,11 @@ def process_finished_files():
                                        cwd=device_work_dir,
                                        creationflags=subprocess.CREATE_NEW_CONSOLE)
             process.wait()
-            logging.info(f'% Finished running {bat_fn} [{len(finished_files)}]')
         except Exception as e:
             logging.error(e)
         finally:
             finished_files = finished_files[1::]
+            logging.info(f'% Finished running {bat_fn} [{len(finished_files)}]')
 
 
 def process_download_files_queue():
@@ -66,7 +66,7 @@ def process_download_files_queue():
                     if not os.path.exists(cur_dir):
                         os.makedirs(cur_dir)
                 event_time = datetime.strptime(qs['event_time'][0], TIME_FMT)
-                msg = f"{ip_address} {event_time} ({len(download_files_queue)})"
+                msg = f"{ip_address} {event_time}"
                 logging.info("^ Processing %s", msg)
                 if event_time > datetime.now():
                     if qs not in skipped_files:
@@ -80,30 +80,30 @@ def process_download_files_queue():
             except Exception as e:
                 logging.error(e)
                 download_files_queue = download_files_queue[1::]
-                logging.info(f'- Removing {msg} from the queue')
+                logging.info(f'- Removing {msg} from the queue ({len(download_files_queue)})')
             else:
                 try:
-                    logging.info("^ Started downloading of %s", msg)
+                    logging.info(f"^ Started downloading of {msg} {({len(download_files_queue)})}")
                     last_step = datetime.now()
                     k = download_files(ip_address, user, password, event_time, work_dir=cur_dir)
-                    logging.info("- Finished downloading %i files on %s", k, msg)
                     finished_files.append(qs)
                     download_files_queue = download_files_queue[1::]
+                    logging.info(f"- Finished downloading {k} files on {msg} ({len(download_files_queue)})")
                 except DVRIPDecodeError as e:
-                    logging.error(f'  Incorrect credentials? {e}')
                     download_files_queue = download_files_queue[1::]
+                    logging.error(f'  Incorrect credentials {e} ({len(download_files_queue)})')
                 except DVRIPRequestError as e:
                     logging.error(e)
                     download_files_queue = download_files_queue[1::]
                 except Exception as e:
                     logging.error(e)
                     if len(download_files_queue) > 1:
-                        logging.info('- Try another')
+                        logging.info(f'- Try next from the queue ({len(download_files_queue)})')
                         download_files_queue = download_files_queue[1::] + download_files_queue[0:1:]
                     logging.info('# Retry in 30 sec')
                     time.sleep(30)
             if len(download_files_queue) == 0:
-                logging.info("  The download queue is empty :)")
+                logging.info(f"  The download queue is empty ({len(download_files_queue)})")
                 process_finished_files()
         else:
             process_finished_files()

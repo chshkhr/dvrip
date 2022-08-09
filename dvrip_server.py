@@ -103,7 +103,6 @@ def process_download_files_queue():
                     logging.info('# Retry in 30 sec')
                     time.sleep(30)
             if len(download_files_queue) == 0:
-                logging.info(f"  The download queue is empty ({len(download_files_queue)})")
                 process_finished_files()
         else:
             process_finished_files()

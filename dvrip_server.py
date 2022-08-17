@@ -37,7 +37,7 @@ def process_finished_files():
             event_time_str = finished_file['event_time'][0]
             event_time = datetime.strptime(event_time_str, TIME_FMT)
             bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT) + '.bat'
-            if 'run_bat' in finished_file and finished_file['run_bat'][0] == '1':
+            if 'run_bat' not in finished_file or finished_file['run_bat'][0] == '1':
                 logging.info(f'% Now running {bat_fn} [{len(finished_files)}]')
                 process = subprocess.Popen(os.path.join(device_work_dir, bat_fn),
                                            cwd=device_work_dir,
@@ -63,6 +63,7 @@ def process_download_files_queue():
                 ip_address = qs['camip'][0]
                 user = qs['user'][0]
                 password = qs['password'][0]
+                run_download = 'run_download' not in qs or qs['run_download'][0] == '1'
                 if 'name' in qs:
                     name = qs['name'][0]
                     cur_dir = os.path.join(work_dir, name)
@@ -75,7 +76,7 @@ def process_download_files_queue():
                     if qs not in skipped_files:
                         skipped_files.append(qs)
                     raise Exception('Start time greater than now')
-                if datetime.now() - event_time < DNL_DELAY:
+                if run_download and datetime.now() - event_time < DNL_DELAY:
                     logging.info(f"# Delayed download start time {event_time + DNL_DELAY}")
                     while datetime.now() - event_time < DNL_DELAY:
                         process_finished_files()
@@ -86,12 +87,17 @@ def process_download_files_queue():
                 logging.info(f'- Removing {msg} from the queue ({len(download_files_queue)})')
             else:
                 try:
-                    logging.info(f"^ Started downloading of {msg} ({len(download_files_queue)})")
-                    last_step = datetime.now()
-                    k = download_files(ip_address, user, password, event_time, work_dir=cur_dir)
-                    finished_files.append(qs)
-                    download_files_queue = download_files_queue[1::]
-                    logging.info(f"- Finished downloading {k} files on {msg} ({len(download_files_queue)})")
+                    if not run_download:
+                        finished_files.append(qs)
+                        download_files_queue = download_files_queue[1::]
+                        logging.info(f"- Downloading of {msg} not requested ({len(download_files_queue)})")
+                    else:
+                        logging.info(f"^ Started downloading of {msg} ({len(download_files_queue)})")
+                        last_step = datetime.now()
+                        k = download_files(ip_address, user, password, event_time, work_dir=cur_dir)
+                        finished_files.append(qs)
+                        download_files_queue = download_files_queue[1::]
+                        logging.info(f"- Finished downloading {k} files on {msg} ({len(download_files_queue)})")
                 except DVRIPDecodeError as e:
                     download_files_queue = download_files_queue[1::]
                     logging.error(f'  Incorrect credentials {e} ({len(download_files_queue)})')
@@ -290,7 +296,8 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
         try:
             with open(dvrip_load_on_run, 'rt') as f:
                 [download_files_queue, finished_files] = json.loads(f.read())
-            logging.info(f'~ On server start the queue ({len(download_files_queue)})-[{len(finished_files)}] has been loaded')
+            logging.info(
+                f'~ On server start the queue ({len(download_files_queue)})-[{len(finished_files)}] has been loaded')
         except Exception as e:
             logging.error(e)
         finally:
@@ -309,7 +316,7 @@ def run(server_class=HTTPServer, handler_class=MyRequestHandler, port=8080):
 
 def save_queue():
     global work_dir, dvrip_load_on_run, download_files_queue, finished_files
-    if len(download_files_queue)+len(finished_files) > 0:
+    if len(download_files_queue) + len(finished_files) > 0:
         logging.info(f'~ Saving the queue ({len(download_files_queue)})-[{len(finished_files)}] to {dvrip_load_on_run}')
         with open(os.path.join(work_dir, dvrip_load_on_run), 'wt') as f:
             f.write(json.dumps([download_files_queue, finished_files]))

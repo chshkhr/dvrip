@@ -43,9 +43,9 @@ def process_finished_files():
                                            cwd=device_work_dir,
                                            creationflags=subprocess.CREATE_NEW_CONSOLE)
                 process.wait()
-                logging.info(f'% Finished running {bat_fn} [{len(finished_files)}]')
+                logging.info(f'% Finished running {bat_fn} [{len(finished_files)-1}]')
             else:
-                logging.info(f'% Skip running {bat_fn} [{len(finished_files)}]')
+                logging.info(f'% Skip running {bat_fn} [{len(finished_files)-1}]')
         except Exception as e:
             logging.error(e)
         finally:

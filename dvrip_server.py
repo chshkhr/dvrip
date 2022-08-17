@@ -37,16 +37,19 @@ def process_finished_files():
             event_time_str = finished_file['event_time'][0]
             event_time = datetime.strptime(event_time_str, TIME_FMT)
             bat_fn = ip4 + event_time.strftime(BAT_FILE_TIME_FMT) + '.bat'
-            logging.info(f'% Now running {bat_fn} [{len(finished_files)}]')
-            process = subprocess.Popen(os.path.join(device_work_dir, bat_fn),
-                                       cwd=device_work_dir,
-                                       creationflags=subprocess.CREATE_NEW_CONSOLE)
-            process.wait()
+            if 'run_bat' in finished_file and finished_file['run_bat'][0] == '1':
+                logging.info(f'% Now running {bat_fn} [{len(finished_files)}]')
+                process = subprocess.Popen(os.path.join(device_work_dir, bat_fn),
+                                           cwd=device_work_dir,
+                                           creationflags=subprocess.CREATE_NEW_CONSOLE)
+                process.wait()
+                logging.info(f'% Finished running {bat_fn} [{len(finished_files)}]')
+            else:
+                logging.info(f'% Skip running {bat_fn} [{len(finished_files)}]')
         except Exception as e:
             logging.error(e)
         finally:
             finished_files = finished_files[1::]
-            logging.info(f'% Finished running {bat_fn} [{len(finished_files)}]')
 
 
 def process_download_files_queue():

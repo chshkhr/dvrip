@@ -7,7 +7,7 @@ del grab\dvrip_Server.log
 del dvrip_server.exe
 move %fn% .
 
-nssm install DvripServer dvrip_server.exe
+nssm install DvripServer dvrip_server.exe 8108
 reg import dvrip_Server.reg
 nssm reset DvripServer ObjectName
 nssm set DvripServer Type SERVICE_INTERACTIVE_PROCESS
